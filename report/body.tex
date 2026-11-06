@@ -41,6 +41,10 @@ it important?
 Following, you should provide the necessary background and discuss related
 work in the RL literature. This section should also be about a page.
 Citations should be in BibTeX format \citep{thrun2005probabilistic}.
+\ifproposal
+Some approaches have proposed using RL for robot soccer
+\cite{riedmiller2009reinforcement}.
+\fi
 
 \section{Technical Approach / Methodology / Theoretical Framework}
 
@@ -57,16 +61,16 @@ videos\footnote{All developed source code for this project is available at
 \subsection{Notation and Problem Formulation}
 
 How did you formalize the problem using mathematical notation?
+\fi
 
 \subsection{Tasks}
 
 Subsections are useful for breaking down the problem into sub-parts. For
 example, you could break down the tasks for your project and list them one by
 one.
-\fi
 
 \ifproposal
-\section{Experiments and Evaluation}
+\section{Evaluation}
 
 Describe how you will evaluate your approach/solution. What constitutes
 success? What metrics will you use? Do you have any preliminary hypothesis
@@ -78,7 +82,7 @@ use.
 State the timeline in terms of weeks and milestones you want to achieve. If
 working on a team, state what the individual responsibilities are at this
 point (i.e., who is going to do what, these may of course change over the
-course of the project) \cite{short2010no}.
+course of the project).
 \else
 \section{Experimental Results / Technical Demonstration}
 

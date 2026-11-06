@@ -112,7 +112,9 @@ Build output goes to `report/build/`, which is git-ignored.
 - **Overleaf:** upload the contents of `report/` and set the main document
   (Menu → Main document) to `proposal.tex` or `final.tex`. The course's
   original template is
-  [here](https://www.overleaf.com/project/5bd749283ef78423cd076886).
+  [here](https://www.overleaf.com/project/5bd749283ef78423cd076886);
+  `proposal.tex` and `final.tex` reproduce its `main_proposal.tex` and
+  `main_final.tex`, and `references.bib` is copied from it.
 
 ## License
 
