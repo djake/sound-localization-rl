@@ -1,0 +1,113 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{A Very Cool and Catchy Title}
+\author{Jake \and Harris Davidson \and Rachel Ellinger}
+\date{\vspace{-1em}}
+
+\usepackage{natbib}
+\usepackage{graphicx}
+
+\begin{document}
+
+\maketitle
+
+% for final report only
+%\begin{abstract}
+%A one paragraph high level description of the work. The abstract is typically the first thing someone would read from the paper before deciding whether to continue reading and hence, serves as an advertisement to the reader to read the whole paper. 
+%\end{abstract}
+
+\section{Introduction}
+
+% DRAFT. Requirements (from the course template): describe the problem in a
+% non-technical manner (no math or equations) and motivate it, i.e., explain
+% why it is important.
+
+When you hear a sound you cannot place, you rarely stay still. You turn your
+head, listen again, and turn some more until the source snaps into place.
+Listening is an active process: where you point your ears determines what you
+hear, and what you hear determines where you should point them next. This
+project asks whether an artificial agent can learn that same habit, and learn
+to do it well.
+
+We study a simple version of the problem. Two microphones sit on a motorized
+``head'' that can turn left and right, and somewhere in the room is a sound
+source, which may be moving. The agent's job is to work out where the sound is
+coming from as accurately and as quickly as possible. Holding still is often
+not enough: with only two microphones, a sound from the front and a sound from
+directly behind can produce nearly the same signals, so a single reading
+cannot tell them apart. Turning the head and listening again breaks the tie,
+but every turn costs time, and a moving source will not wait while the agent
+deliberates. The agent therefore faces a planning problem: deciding how to turn
+so that it collects the information it needs to locate the sound, without
+wasting effort on movements that tell it little, and knowing when it has heard
+enough to commit to an answer.
+
+This makes the task a natural fit for reinforcement learning. Rather than
+hand-coding a search strategy, we let the agent learn one through trial and
+error, rewarding it for naming the right direction and charging it for every
+turn it takes and every wrong guess. We then compare what it learns against
+simple strategies, such as turning at random or following a fixed routine that
+turns until the sound is centered and then checks front against back.
+
+We train the agent in a simulated room, which lets us control exactly what it
+hears and run far more trials than would be practical with real equipment. We
+start with the simplest version of the problem, a quiet room with no echoes and
+a single stationary source playing short bursts of static, and then add realism
+one step at a time: echoes, competing sounds, small imperfections in the
+microphones and motor, a moving source, and a second direction of rotation. We
+are also building a small set of physical heads, each a pair of microphones on
+a motor, to test whether behavior learned in simulation holds up in a real
+room and to demonstrate the result.
+
+The problem matters well beyond this setup. Robots that work alongside people
+need to turn toward someone who speaks to them; search-and-rescue systems may
+need to find a person by the sound they make; and devices such as smart
+speakers, security cameras, and hearing aids all benefit from knowing where a
+sound is coming from. In each case, sensors are limited and time matters, so
+the ability to choose where to listen next is as important as the ability to
+interpret what is heard. As stretch goals, we also plan to examine whether a
+learned strategy transfers to new conditions, and to extend the task to
+multiple agents in a setting modeled on the game Marco Polo.
+
+\section{Background Related Work}
+
+Following, you should provide the necessary background and discuss related work in the RL literature. This section should also be about a page. Citations should be in BibTeX format \citep{thrun2005probabilistic}. Some approaches have proposed using RL for robot soccer \cite{riedmiller2009reinforcement}.
+
+\section{Technical Approach / Methodology / Theoretical Framework}
+
+% for proposal
+Describe how you will approach the problem and its technical formulation. Feel free to re-state the basic RL formulas (e.g., if using Q-learning, state the update rule or the formula for what the Q function approximates). 
+
+
+% for final report
+%A detailed description of your problem (with math, notation, algorithms, figures, etc.). Use footnotes to cite links to your code or videos\footnote{All developed source code for this project is available at ...}
+
+\subsection{Tasks}
+
+Subsections are useful for breaking down the problem into sub-parts. For example, you could break down the tasks for your project and list them one by one. 
+
+% for final report
+%\section{Experimental Results / Technical Demonstration}
+
+%A description of how you evaluated or demonstrated your solution.\footnote{a video of the robot doing x y z is available at...} 
+
+% for proposal
+\section{Evaluation}
+
+Describe how you will evaluate your approach/solution. What constitutes success? What metrics will you use? Do you have any preliminary hypothesis that you plan to test? Also, describe the RL domain or environment you plan to use. 
+
+% for final report
+%\section{Conclusion and Future Work}
+
+%A high level summary of what was accomplished, along with a discussion on limitations and avenues for future work (typically 2 to 3 paragraphs). 
+
+
+\section{Timeline and Individual Responsibilities}
+
+State the timeline in terms of weeks and milestones you want to achieve. If working on a team, state what the individual responsibilities are at this point (i.e., who is going to do what, these may of course change over the course of the project). 
+%\cite{short2010no}.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

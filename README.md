@@ -25,27 +25,27 @@ Stretch goals:
 
 ```
 report/
-  body.tex          Shared source for the proposal and the final report
-  proposal.tex      Builds the proposal (sets \proposaltrue, inputs body.tex)
-  final.tex         Builds the final report (sets \proposalfalse, inputs body.tex)
-  references.bib    BibTeX references
-  Makefile          latexmk build targets
+  main_proposal.tex   Project proposal (deliverable 1)
+  main_final.tex      Final report (deliverable 2)
+  references.bib      BibTeX references, shared by both
+  Makefile            latexmk build targets
 ```
 
 Simulation and training code will live alongside `report/` as it is added.
 
 ## Building the report
 
-The proposal and final report share one source file, `report/body.tex`.
-Sections that differ between the two are wrapped in
-`\ifproposal ... \else ... \fi`; everything else appears in both. Edit
-`body.tex`, then build whichever document you need.
+The proposal and the final report are separate documents, matching the
+course's Overleaf template: `report/main_proposal.tex` and
+`report/main_final.tex`. They share `references.bib`. Text written for the
+proposal (introduction, background) is carried into the final report by
+copying it over.
 
 ### Install requirements
 
 You need a TeX distribution that provides `pdflatex`, `bibtex` and `latexmk`,
-plus `make`. The report only uses standard packages (`natbib`, `graphicx`,
-`amsmath`, `amssymb`, `hyperref`), which every distribution below includes.
+plus `make`. The template only uses standard packages (`natbib`, `graphicx`), which
+every distribution below includes.
 
 **macOS**
 
@@ -88,8 +88,8 @@ latexmk -v
 
 ```sh
 cd report
-make proposal          # -> report/build/proposal.pdf
-make final             # -> report/build/final.pdf
+make proposal          # -> report/build/main_proposal.pdf
+make final             # -> report/build/main_final.pdf
 make                   # both
 make watch-proposal    # rebuild on every save (also watch-final)
 make clean             # remove build output
@@ -99,7 +99,7 @@ Without `make`:
 
 ```sh
 cd report
-latexmk -pdf -outdir=build proposal.tex
+latexmk -pdf -outdir=build main_proposal.tex
 ```
 
 Build output goes to `report/build/`, which is git-ignored.
@@ -107,12 +107,11 @@ Build output goes to `report/build/`, which is git-ignored.
 ### Editor and Overleaf
 
 - **VS Code:** the [LaTeX Workshop](https://marketplace.visualstudio.com/items?itemName=James-Yu.latex-workshop)
-  extension uses `latexmk` and builds on save. Open `proposal.tex` or
-  `final.tex` (not `body.tex`) when you build.
+  extension uses `latexmk` and builds on save.
 - **Overleaf:** upload the contents of `report/` and set the main document
-  (Menu → Main document) to `proposal.tex` or `final.tex`. The course's
-  original template is
-  [here](https://www.overleaf.com/project/5bd749283ef78423cd076886).
+  (Menu → Main document) to `main_proposal.tex` or `main_final.tex`. These
+  files and `references.bib` start from the course's
+  [Overleaf template](https://www.overleaf.com/project/5bd749283ef78423cd076886).
 
 ## License
 
