@@ -43,26 +43,35 @@ hear, and what you hear determines where you should point them next. This
 project asks whether an artificial agent can learn that same habit, and learn
 to do it well.
 
-We study a simple version of the problem. One or two microphones are mounted on
-a servo motor that can rotate them, and somewhere in the surrounding space is a
-sound source, which may be moving. The agent's job is to work out where the
-sound is coming from as accurately and as quickly as possible. Holding still
-is often not enough: with only two microphones, a sound from the front and a
-sound from directly behind can produce nearly the same signals, and a single
-microphone carries even less directional information. Turning the microphones
-breaks these ties, but every turn costs time, and a moving source will not wait
-while the agent deliberates. The agent therefore faces a planning problem:
-deciding how to move the servo so that it collects the information it needs to
-locate the sound, without wasting effort on movements that tell it little.
+We study a simple version of the problem. Two microphones sit on a motorized
+``head'' that can turn left and right, and somewhere in the room is a sound
+source, which may be moving. The agent's job is to work out where the sound is
+coming from as accurately and as quickly as possible. Holding still is often
+not enough: with only two microphones, a sound from the front and a sound from
+directly behind can produce nearly the same signals, so a single reading
+cannot tell them apart. Turning the head and listening again breaks the tie,
+but every turn costs time, and a moving source will not wait while the agent
+deliberates. The agent therefore faces a planning problem: deciding how to turn
+so that it collects the information it needs to locate the sound, without
+wasting effort on movements that tell it little, and knowing when it has heard
+enough to commit to an answer.
 
 This makes the task a natural fit for reinforcement learning. Rather than
 hand-coding a search strategy, we let the agent learn one through trial and
-error, rewarding it for locating the source accurately and efficiently. The
-agent may also need to learn what the microphone signals mean in the first
-place, i.e., to learn sound localization itself as it learns where to look.
-All of this takes place in simulation, which lets us vary the sound source,
-its motion, and the listening setup freely and run far more trials than would
-be practical with physical hardware.
+error, rewarding it for naming the right direction and charging it for every
+turn it takes and every wrong guess. We then compare what it learns against
+simple strategies, such as turning at random or following a fixed routine that
+turns until the sound is centered and then checks front against back.
+
+We train the agent in a simulated room, which lets us control exactly what it
+hears and run far more trials than would be practical with real equipment. We
+start with the simplest version of the problem, a quiet room with no echoes and
+a single stationary source playing short bursts of static, and then add realism
+one step at a time: echoes, competing sounds, small imperfections in the
+microphones and motor, a moving source, and a second direction of rotation. We
+are also building a small set of physical heads, each a pair of microphones on
+a motor, to test whether behavior learned in simulation holds up in a real
+room and to demonstrate the result.
 
 The problem matters well beyond this setup. Robots that work alongside people
 need to turn toward someone who speaks to them; search-and-rescue systems may
