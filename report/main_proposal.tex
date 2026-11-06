@@ -23,52 +23,18 @@
 % non-technical manner (no math or equations) and motivate it, i.e., explain
 % why it is important.
 
-When you hear a sound you cannot place, you rarely stay still. You turn your
-head, listen again, and turn some more until the source snaps into place.
-Listening is an active process: where you point your ears determines what you
-hear, and what you hear determines where you should point them next. This
-project asks whether an artificial agent can learn that same habit, and learn
-to do it well.
+When you hear a sound you cannot place, you rarely stay still. You turn your head, listening as your head turns towards the predicted location of the source, gathering information until the location of the sound source is solidified. Listening is an active process. Where you turn your head determines the cues that you hear, and what you hear determines where you should turn your head to optimize cue information that your ears receive next. This project asks whether a reinforcement learning agent can learn that same skill, and learn to do it well.
 
-We study a simple version of the problem. Two microphones sit on a motorized
-``head'' that can turn left and right, and somewhere in the room is a sound
-source, which may be moving. The agent's job is to work out where the sound is
-coming from as accurately and as quickly as possible. Holding still is often
-not enough: with only two microphones, a sound from the front and a sound from
-directly behind can produce nearly the same signals, so a single reading
-cannot tell them apart. Turning the head and listening again breaks the tie,
-but every turn costs time, and a moving source will not wait while the agent
-deliberates. The agent therefore faces a planning problem: deciding how to turn
-so that it collects the information it needs to locate the sound, without
-wasting effort on movements that tell it little, and knowing when it has heard
-enough to commit to an answer.
+This experiment proposes a simplified version of the problem of sound localization. There is a "head", which can be represented in vitro as a simulated head or in vivo as two microphones sitting on a motorized "head" that can turn left and right, and somewhere in the room is a sound source, which may be static or dynamic. The agent's job is to identify where the sound is coming from as accurately and quickly as possible. Keeping the head still is often not enough to locate a sound. For example, with only two microphones, similar to having only two ears, there is confusion regarding front/back hemifield sound sources. The sound from 0 degrees azimuth and 180 degrees azimuth essentially provide identical sound cues, so a stationary listener cannot reliably tell the location of the sound source. Turning the head, and thus creating dynamic interaural time (ITD) and level (ILD) difference sound cues associated with head rotation helps listeners to resolve ambiguities in sound localization. However, every turn costs time and energy, and a moving sound source will not wait for the agent. Therefore the agent faces a planning problem where it has to decide how to turn so that it maximizes collection of information to locate the sound source without wasting effort on movements that provide minimal information and knowing when it has heard enough to commit to an answer.
 
-This makes the task a natural fit for reinforcement learning. Rather than
-hand-coding a search strategy, we let the agent learn one through trial and
-error, rewarding it for naming the right direction and charging it for every
-turn it takes and every wrong guess. We then compare what it learns against
-simple strategies, such as turning at random or following a fixed routine that
-turns until the sound is centered and then checks front against back.
+This makes the task a natural fit for reinforcement learning. Rather than hand-coding a search strategy, we let the agent learn through trial and error, rewarding it for naming the correct direction and penalizing it for every turn it takes and every wrong guess. We then compare what it learns against simple strategies, such as turning at random or following a fixed routine that turns until the sound is centered and then checks front against back.
 
-We train the agent in a simulated room, which lets us control exactly what it
-hears and run far more trials than would be practical with real equipment. We
-start with the simplest version of the problem, a quiet room with no echoes and
-a single stationary source playing short bursts of static, and then add realism
-one step at a time: echoes, competing sounds, small imperfections in the
-microphones and motor, a moving source, and a second direction of rotation. We
-are also building a small set of physical heads, each a pair of microphones on
-a motor, to test whether behavior learned in simulation holds up in a real
-room and to demonstrate the result.
+We train the agent in a simulated room, which allows for control of exactly what it hears and run far more trials than would be practical with real equipment. We start with the simplest version of the problem, a quiet room with no reverberation and a single stationary source playing short bursts of static, and then as a second goal to determine if a policy can transfer to new conditions, we add elements one step at a time, such as echoes, competing sounds, small imperfections in or noise from the microphones and motor, a dynamic source, or a second direction of rotation. We also aim as a third stretch goal to build a small physical head with a pair of microphones on a motor to test whether behavior learned in simulation holds up in a real room and to demonstrate the result in order to determine if the learned strategy transfers to a robot agent.
 
 The problem matters well beyond this setup. Robots that work alongside people
-need to turn toward someone who speaks to them; search-and-rescue systems may
-need to find a person by the sound they make; and devices such as smart
-speakers, security cameras, and hearing aids all benefit from knowing where a
-sound is coming from. In each case, sensors are limited and time matters, so
-the ability to choose where to listen next is as important as the ability to
-interpret what is heard. As stretch goals, we also plan to examine whether a
-learned strategy transfers to new conditions, and to extend the task to
-multiple agents in a setting modeled on the game Marco Polo.
+need to turn toward someone who speaks to them, search-and-rescue systems may
+need to find a person through their call for help, and devices such as smart
+speakers, security cameras, and hearing aids all benefit from having information about where a sound is coming from. In each case, sensors are limited and time matters, so the ability to choose where to "listen" next is integral.
 
 \section{Background Related Work}
 
