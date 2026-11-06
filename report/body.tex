@@ -32,9 +32,47 @@ the whole paper.
 
 \section{Introduction}
 
-The introduction should describe the problem (in a non-technical manner, i.e.,
-without math, equations, etc.), as well as motivate the problem, i.e., why is
-it important?
+% DRAFT. Requirements (from the course template): describe the problem in a
+% non-technical manner (no math or equations) and motivate it, i.e., explain
+% why it is important.
+
+When you hear a sound you cannot place, you rarely stay still. You turn your
+head, listen again, and turn some more until the source snaps into place.
+Listening is an active process: where you point your ears determines what you
+hear, and what you hear determines where you should point them next. This
+project asks whether an artificial agent can learn that same habit, and learn
+to do it well.
+
+We study a simple version of the problem. One or two microphones are mounted on
+a servo motor that can rotate them, and somewhere in the surrounding space is a
+sound source, which may be moving. The agent's job is to work out where the
+sound is coming from as accurately and as quickly as possible. Holding still
+is often not enough: with only two microphones, a sound from the front and a
+sound from directly behind can produce nearly the same signals, and a single
+microphone carries even less directional information. Turning the microphones
+breaks these ties, but every turn costs time, and a moving source will not wait
+while the agent deliberates. The agent therefore faces a planning problem:
+deciding how to move the servo so that it collects the information it needs to
+locate the sound, without wasting effort on movements that tell it little.
+
+This makes the task a natural fit for reinforcement learning. Rather than
+hand-coding a search strategy, we let the agent learn one through trial and
+error, rewarding it for locating the source accurately and efficiently. The
+agent may also need to learn what the microphone signals mean in the first
+place, i.e., to learn sound localization itself as it learns where to look.
+All of this takes place in simulation, which lets us vary the sound source,
+its motion, and the listening setup freely and run far more trials than would
+be practical with physical hardware.
+
+The problem matters well beyond this setup. Robots that work alongside people
+need to turn toward someone who speaks to them; search-and-rescue systems may
+need to find a person by the sound they make; and devices such as smart
+speakers, security cameras, and hearing aids all benefit from knowing where a
+sound is coming from. In each case, sensors are limited and time matters, so
+the ability to choose where to listen next is as important as the ability to
+interpret what is heard. As stretch goals, we also plan to examine whether a
+learned strategy transfers to new conditions, and to extend the task to
+multiple agents in a setting modeled on the game Marco Polo.
 
 \section{Background and Related Work}
 
