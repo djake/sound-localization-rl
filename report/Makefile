@@ -8,18 +8,18 @@ LATEXMK = latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=build
 all: proposal final
 
 proposal:
-	$(LATEXMK) proposal.tex
+	$(LATEXMK) main_proposal.tex
 
 final:
-	$(LATEXMK) final.tex
+	$(LATEXMK) main_final.tex
 
 # Rebuild automatically whenever a source file changes.
 watch-proposal:
-	$(LATEXMK) -pvc proposal.tex
+	$(LATEXMK) -pvc main_proposal.tex
 
 watch-final:
-	$(LATEXMK) -pvc final.tex
+	$(LATEXMK) -pvc main_final.tex
 
 clean:
-	latexmk -C -outdir=build proposal.tex final.tex
+	latexmk -C -outdir=build main_proposal.tex main_final.tex
 	rm -rf build
