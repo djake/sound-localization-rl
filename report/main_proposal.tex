@@ -7,6 +7,7 @@
 
 \usepackage{natbib}
 \usepackage{graphicx}
+\usepackage{array}
 
 \begin{document}
 
@@ -51,7 +52,84 @@ Describe how you will approach the problem and its technical formulation. Feel f
 
 \subsection{Tasks}
 
-Subsections are useful for breaking down the problem into sub-parts. For example, you could break down the tasks for your project and list them one by one. 
+We break the project into six areas of work. Each builds on the ones before it,
+and we plan to get the simplest version of the full pipeline (environment,
+agent, harness, one experiment) working before adding complications.
+
+\begin{enumerate}
+  \item \textbf{Simulation environment.} A simulated room in which a
+  two-microphone head turns left and right and listens to a sound source.
+  \begin{enumerate}
+    \item Base room in pyroomacoustics: no echoes, one stationary source
+    playing repeated short bursts of static.
+    \item Precompute the room's response at each head angle so that training
+    runs quickly.
+    \item Observation model: estimate the time difference between the two
+    microphones and bucket it from far left to far right.
+    \item Environment interface: state (current bucket, previous bucket, last
+    turn direction), actions (turn left, turn right, declare the direction),
+    reward ($-1$ per step, a bonus for a correct declaration, a penalty for a
+    wrong one), and episode termination.
+    \item Configurable complications, added one at a time: echoes, competing
+    sounds, small microphone and motor errors, a moving source, and a second
+    axis of rotation.
+  \end{enumerate}
+
+  \item \textbf{Agents.} Learning agents and baselines that share one
+  interface, following Sutton and Barto~\cite{sutton1998reinforcement}.
+  \begin{enumerate}
+    \item Baselines: a random policy, and a hand-written strategy (turn until
+    the sound is centered, check front against back, then declare).
+    \item Tabular Q-learning and SARSA.
+    \item Semi-gradient SARSA with tile coding.
+    \item REINFORCE with a baseline, or actor-critic.
+    \item Stretch: DQN.
+  \end{enumerate}
+
+  \item \textbf{Test harness.} Shared tooling that runs any agent in any
+  environment configuration and records the results.
+  \begin{enumerate}
+    \item Episode runner with fixed random seeds and configurable environment
+    and agent settings.
+    \item Metrics: fraction of correct declarations, angular error, steps
+    taken before declaring, and return.
+    \item Logging, learning curves, and summary plots, saved per experiment so
+    figures can be regenerated for the report.
+  \end{enumerate}
+
+  \item \textbf{Experiments.} Each experiment is a configuration of the
+  harness.
+  \begin{enumerate}
+    \item Algorithm comparison in the base environment, against both
+    baselines.
+    \item Robustness to echoes and competing sounds.
+    \item Robustness to microphone and motor errors.
+    \item Tracking a moving source.
+    \item Stretch: transfer, i.e., training in one condition and testing in
+    another, including from simulation to the physical heads.
+    \item Stretch: a multi-agent version modeled on the game Marco Polo.
+  \end{enumerate}
+
+  \item \textbf{Physical heads (optional).} Three two-microphone heads on
+  stepper motors, used for evaluation and the demo.
+  \begin{enumerate}
+    \item Order parts (by Nov 9, to arrive by Nov 18).
+    \item Assemble the heads and write firmware for audio capture and motor
+    control.
+    \item Connect the heads to the agent running on a laptop.
+    \item Evaluate trained agents in a real room and record the demo.
+  \end{enumerate}
+
+  \item \textbf{Writeup.}
+  \begin{enumerate}
+    \item Proposal (this document).
+    \item Final report: abstract; introduction (carried over from the
+    proposal); background and related work; technical approach, notation, and
+    problem formulation; experimental results and figures; conclusion and
+    future work.
+    \item Links to code and the demo video, proofreading, and submission.
+  \end{enumerate}
+\end{enumerate}
 
 % for final report
 %\section{Experimental Results / Technical Demonstration}
@@ -71,8 +149,102 @@ Describe how you will evaluate your approach/solution. What constitutes success?
 
 \section{Timeline and Individual Responsibilities}
 
-State the timeline in terms of weeks and milestones you want to achieve. If working on a team, state what the individual responsibilities are at this point (i.e., who is going to do what, these may of course change over the course of the project). 
+The proposal is due Friday, November 13 at 11:40\,pm, and the final report is
+due Wednesday, December 23 at 5:00\,pm. Table~\ref{tab:timeline} lays out the
+weeks in between, with the milestones we want to reach by the end of each
+week. The week of November 23 includes Thanksgiving, so it carries less work.
+Weeks 6 and 7 leave room to absorb slippage before the deadline; stretch goals
+are pursued only if the core experiments are done.
+
+Table~\ref{tab:responsibilities} lists who is responsible for each area of
+work. Owners have not been assigned yet and are marked TBD; we expect
+assignments to shift as the project progresses.
+
+\begin{table}[!htbp]
+\centering
+\small
+\begin{tabular}{|l|>{\raggedright\arraybackslash}p{0.85in}|>{\raggedright\arraybackslash}p{2.3in}|p{0.45in}|}
+\hline
+\textbf{Week} & \textbf{Dates} & \textbf{Milestones} & \textbf{Owner} \\
+\hline
+1 & Nov 9--15 &
+Proposal submitted (Nov 13). Base simulated room running with precomputed
+responses. Physical parts ordered (optional). & TBD \\
+\hline
+2 & Nov 16--22 &
+Environment interface complete. Random and hand-written baselines run end to
+end through the test harness, with metrics and plots. & TBD \\
+\hline
+3 & Nov 23--29 &
+Tabular Q-learning and SARSA trained in the base environment
+(Thanksgiving week). & TBD \\
+\hline
+4 & Nov 30--Dec 6 &
+Tile-coding SARSA and a policy-gradient agent working. Algorithm comparison
+experiment complete. Echoes, competing sounds, and sensor errors added to the
+environment. Physical heads assembled (optional). & TBD \\
+\hline
+5 & Dec 7--13 &
+Robustness and moving-source experiments complete. Real-room evaluation
+(optional). Introduction and background for the final report drafted. & TBD \\
+\hline
+6 & Dec 14--20 &
+Stretch goals if ahead. Full draft of the final report by Dec 18. Demo video
+recorded. & TBD \\
+\hline
+7 & Dec 21--23 &
+Revisions and proofreading. Final report submitted (Dec 23, 5:00\,pm). & TBD \\
+\hline
+\end{tabular}
+\caption{Weekly timeline and milestones.}
+\label{tab:timeline}
+\end{table}
+
+\begin{table}[!htbp]
+\centering
+\small
+\begin{tabular}{|>{\raggedright\arraybackslash}p{1.2in}|>{\raggedright\arraybackslash}p{2.4in}|p{0.45in}|}
+\hline
+\textbf{Area} & \textbf{Task} & \textbf{Owner} \\
+\hline
+Environment & Base room and precomputed responses & TBD \\
+ & Observation model and environment interface & TBD \\
+ & Complications (echoes, competing sounds, errors, moving source, second axis) & TBD \\
+\hline
+Agents & Random and hand-written baselines & TBD \\
+ & Tabular Q-learning and SARSA & TBD \\
+ & Semi-gradient SARSA with tile coding & TBD \\
+ & REINFORCE / actor-critic & TBD \\
+ & DQN (stretch) & TBD \\
+\hline
+Test harness & Episode runner and configuration & TBD \\
+ & Metrics, logging, and plots & TBD \\
+\hline
+Experiments & Algorithm comparison & TBD \\
+ & Echoes and competing sounds & TBD \\
+ & Microphone and motor errors & TBD \\
+ & Moving source & TBD \\
+ & Transfer and sim-to-real (stretch) & TBD \\
+ & Marco Polo (stretch) & TBD \\
+\hline
+Hardware (optional) & Parts, assembly, and firmware & TBD \\
+ & Real-room evaluation and demo & TBD \\
+\hline
+Writeup & Proposal & TBD \\
+ & Literature review and related work & TBD \\
+ & Technical approach and notation & TBD \\
+ & Results and figures & TBD \\
+ & Abstract, conclusion, and final editing & TBD \\
+\hline
+\end{tabular}
+\caption{Individual responsibilities.}
+\label{tab:responsibilities}
+\end{table}
+
 %\cite{short2010no}.
+
+% Print any pending tables before the references.
+\clearpage
 
 \bibliographystyle{plain}
 \bibliography{references}

@@ -44,7 +44,7 @@ copying it over.
 ### Install requirements
 
 You need a TeX distribution that provides `pdflatex`, `bibtex` and `latexmk`,
-plus `make`. The template only uses standard packages (`natbib`, `graphicx`), which
+plus `make`. The report only uses standard packages (`natbib`, `graphicx`, `array`), which
 every distribution below includes.
 
 **macOS**
