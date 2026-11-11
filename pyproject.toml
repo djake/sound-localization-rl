@@ -1,0 +1,24 @@
+[project]
+name = "sound-localization-rl"
+version = "0.1.0"
+description = "Active sound localization with reinforcement learning (CS 138 final project)"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "pyroomacoustics>=0.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["sim"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
