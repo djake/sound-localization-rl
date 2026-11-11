@@ -1,8 +1,8 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
 
-\title{A Very Cool and Catchy Title}
-\author{Jake \and Harris Davidson \and Rachel Ellinger}
+\title{Training An Agent for Audio Source Localization}
+\author{Jake Lambert \and Harris Davidson \and Rachel Ellinger}
 \date{\vspace{-1em}}
 
 \usepackage{natbib}
@@ -24,22 +24,55 @@
 % non-technical manner (no math or equations) and motivate it, i.e., explain
 % why it is important.
 
-When you hear a sound you cannot place, you rarely stay still. You turn your head, listening as your head turns towards the predicted location of the source, gathering information until the location of the sound source is solidified. Listening is an active process. Where you turn your head determines the cues that you hear, and what you hear determines where you should turn your head to optimize cue information that your ears receive next. This project asks whether a reinforcement learning agent can learn that same skill, and learn to do it well.
+When you hear a sound you cannot place, you rarely stay still. You turn your head, listening as your head turns towards the predicted location of the source, gathering information until the location of the sound source is solidified. Listening is an active process. Where you turn your head determines the cues that you hear, and what you hear determines where you should turn your head to optimize the information that is received next. This project asks whether a reinforcement learning agent can learn to do that same skill.
 
-This experiment proposes a simplified version of the problem of sound localization. There is a "head", which can be represented in vitro as a simulated head or in vivo as two microphones sitting on a motorized "head" that can turn left and right, and somewhere in the room is a sound source, which may be static or dynamic. The agent's job is to identify where the sound is coming from as accurately and quickly as possible. Keeping the head still is often not enough to locate a sound. For example, with only two microphones, similar to having only two ears, there is confusion regarding front/back hemifield sound sources. The sound from 0 degrees azimuth and 180 degrees azimuth essentially provide identical sound cues, so a stationary listener cannot reliably tell the location of the sound source. Turning the head, and thus creating dynamic interaural time (ITD) and level (ILD) difference sound cues associated with head rotation helps listeners to resolve ambiguities in sound localization. However, every turn costs time and energy, and a moving sound source will not wait for the agent. Therefore the agent faces a planning problem where it has to decide how to turn so that it maximizes collection of information to locate the sound source without wasting effort on movements that provide minimal information and knowing when it has heard enough to commit to an answer.
+This experiment proposes a simplified version of the problem of audio source localization, also known as sound localization. There is a "head", which can be represented in programming simulation or in hardware as two microphones sitting on a motorized "head" that can turn left and right, and somewhere in the room is a sound source, which may be static or dynamic. The agent's job is to identify where the sound is coming from as accurately and quickly as possible. Keeping the head still is often not enough to locate a sound. With only two microphones, similar to having only two ears, there is cone of confusion where different sound sources have identical interaural time (ITD) and level (ILD) difference cues. Because the sound cues are identical, this creates the brain has trouble identifying where the sound is coming from, confusing between hemifield sound sources such as front/back horizontally or above/below vertically. For example, the sound from 0 degrees azimuth and 180 degrees azimuth essentially provide identical sound cues, so a stationary listener cannot reliably tell the location of the sound source \cite{kapralos2008virtualaudiosystems}. Turning the head, and thus creating dynamic ITD and ILD sound cues associated with head rotation helps listeners to resolve ambiguities in sound localization \cite{Wallach1940headmovement}. However, when considering this phenomenon, every turn costs time and energy, and in real life applications, a moving sound source will not wait for the agent. Therefore the agent faces a planning problem where it has to decide how to turn so that it maximizes collection of information to locate the sound source without wasting effort on movements that provide minimal information and know when it has heard enough to commit to an answer.
 
-This makes the task a natural fit for reinforcement learning. Rather than hand-coding a search strategy, we let the agent learn through trial and error, rewarding it for naming the correct direction and penalizing it for every turn it takes and every wrong guess. We then compare what it learns against simple strategies, such as turning at random or following a fixed routine that turns until the sound is centered and then checks front against back.
+This makes the task a natural fit for reinforcement learning. Rather than hand-coding a search strategy, we let the agent learn through trial and error, rewarding it for labeling the correct source direction (within a fixed tolerance)
+and penalizing it for every turn it takes and every wrong guess. We then compare what it learns against simple strategies, such as turning at random or following a fixed routine that turns until the sound is centered and then checks against corresponding points on the cone of confusion where ITD values are shared.
 
-We train the agent in a simulated room, which allows for control of exactly what it hears and run far more trials than would be practical with real equipment. We start with the simplest version of the problem, a quiet room with no reverberation and a single stationary source playing short bursts of static, and then as a second goal to determine if a policy can transfer to new conditions, we add elements one step at a time, such as echoes, competing sounds, small imperfections in or noise from the microphones and motor, a dynamic source, or a second direction of rotation. We also aim as a third stretch goal to build a small physical head with a pair of microphones on a motor to test whether behavior learned in simulation holds up in a real room and to demonstrate the result in order to determine if the learned strategy transfers to a robot agent.
+First we train the agent in a simulated room, which allows for control of exactly what it hears and the ability to run more trials than would be practical with real equipment. We start with the simplest version of the problem, a quiet room with no reverberation and a single stationary source playing white noise and train the agent across multiple reinforcement learning algorithms. Then as a second goal to determine if a policy can transfer to new conditions, we can then add elements one step at a time, such as echoes, competing sounds, small imperfections like noise from the microphones and motor, a dynamic audio source, or a second direction of rotation. We also aim as a third stretch goal to build a small physical head with a pair of microphones on a motor to test whether behavior learned in simulation holds up in a real room and to demonstrate the result in order to determine if the learned strategy transfers to a robot.
 
-The problem matters well beyond this setup. Robots that work alongside people
-need to turn toward someone who speaks to them, search-and-rescue systems may
-need to find a person through their call for help, and devices such as smart
-speakers, security cameras, and hearing aids all benefit from having information about where a sound is coming from. In each case, sensors are limited and time matters, so the ability to choose where to "listen" next is integral.
+The problem matters well beyond this setup. Robots that work alongside people need to turn toward someone who speaks to them, search-and-rescue systems may need to find a person through their call for help, and devices such as smart speakers, security cameras, and hearing aids all benefit from having information about where a sound is coming from. In each case, sensors are limited and time matters, so the ability to choose where to "listen" next is integral.
 
 \section{Background Related Work}
 
-Following, you should provide the necessary background and discuss related work in the RL literature. This section should also be about a page. Citations should be in BibTeX format \citep{thrun2005probabilistic}. Some approaches have proposed using RL for robot soccer \cite{riedmiller2009reinforcement}.
+Audio source localization is a popular topic of research across both hearing sciences and machine learning, and more recently has seen conceptual integration across the two fields. Here, we propose extending this task to reinforcement learning for sound localization, a less researched area of study, as seems only natural considering reinforcement learning's strengths in sequential decision making towards optimizing the achievement of a goal state under uncertainty.
+
+\subsection{Auditory cues and localization}
+To perform the task of auditory localization, the brain requires the primary information obtained from timing, intensity, and frequency of the perceived sound ITDs, ILDs, and Head Related Transfer Function (HRTF), as well as secondary information such as relative motion and reverberation \cite{carlini2024audiolocalizationsummary}.
+
+\subsection{Computational sound source localization}
+
+Classical methods in engineering treat localization as a signal-processing problem where factors such as time differences of arrival between microphones and direction of arrival, as obtained through methods like beamforming, are combined through triangulation or multilateration with Gaussian mixture models to create propogation models for localization \cite{jekaterynczuk2023survey}. Meanwhile, more recent machine learning-based methods have replaced hand-selected feature computations with networks trained on simulated or recorded data, including convolutional neural networks, convolutional-recurrent networks, residual networks, and transformers \cite{jekaterynczuk2023survey, grumiaux2022survey}. Deep neural networks trained on binaural audio in simulated reverberant environments can also be used to reproduce features of human localization behavior \cite{francl2022deep}. Work by Ma et al. (2017) has found that, similar to established hearing sciences research, the addition of head rotation information in a deep neural network model resolves front-back confusion by allowing models to access ILDs and generate a more accurate cross-correlation function in addition to already available ITD cues \cite{ma2017exploiting}. Across the literature, however, the listener is almost always passive, whereby the network maps a fixed recording to a location estimate and has no control over what is heard next.
+
+\subsection{Active-localization and machine hearing in robot audition}
+
+A small subset of research in robot audition has explored sensor movement for localization and found that treatment of head motion as an estimation-and-control problem has allowed a robot to improve localization performance. One such study used active exploration in the horizontal plane to assess sound source azimuth and distance estimates via a Monte Carlo framework integrating probabilistic modeling using particle filtering \cite{schymura2017monte}, while a separate study focused on Monte Carlo tree search method to achieve similar long-term planning \cite{Nguyen2017mcts}. Short-term, one-step-ahead calculations have also been applied to greedily select the best movement that will provide the most new information about where a sound is originating \cite{bustamante2016one}. While these methods show that motion improves localization, their motion policies are manually designed and require online search, which is expensive and must be re-established whenever the sensing model changes.
+
+\subsection{Reinforcement learning for auditory agents}
+
+Reinforcement learning has been applied to auditory agents mainly in embodied
+navigation. In audio-visual navigation, an agent moves through a simulated 3D
+environment toward a sound-emitting target using egocentric vision and binaural
+audio \cite{chen2020soundspaces}. Later work extended this to moving sound sources and distractor sounds \cite{younes2023catch} and to moving in order to hear a target more clearly \cite{majumder2021move2hear}.
+
+Closest to our project, Ledder et al. (\cite{ledder2024audio}) trained an agent using a deep Q-learning framework to orient a head towards a talker from stereo speech recording alone. The authors found that the agent trained in medium to high reverberant environments displayed greater generalization across a range of naturalistic acoustic environments. These studies establish that reinforcement learning agents can exploit traditional sound localization ITD and ILD cues, as well as spatial audio through head movements and information derived from reverberation.
+
+\subsection{Gap and Contribution}
+
+Prior active-localization systems rely on manually-designed or search-based motion strategies, while reinforcement learning work on auditory agents has focused on navigation and orientation rather than on the information-gathering decision itself. To our knowledge, no work has trained a reinforcement learning agent to decide when and how to turn a two-microphone head specifically to resolve front-back ambiguity, nor compared against learned policies achieved from multiple different algorithms versus classical head-turn strategies. Our project thus attempts to address this gap.
+
+
+
+
+
+
+
+
+
+
+% Following, you should provide the necessary background and discuss related work in the RL literature. This section should also be about a page. Citations should be in BibTeX format \citep{thrun2005probabilistic}. Some approaches have proposed using RL for robot soccer \cite{riedmiller2009reinforcement}.
 
 \section{Technical Approach / Methodology / Theoretical Framework}
 
