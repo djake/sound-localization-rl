@@ -21,3 +21,7 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# Simulation cache
+.cache/
+*.egg-info/
