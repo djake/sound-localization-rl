@@ -92,6 +92,7 @@ Describe how you will approach the problem and its technical formulation. Feel f
 %A detailed description of your problem (with math, notation, algorithms, figures, etc.). Use footnotes to cite links to your code or videos\footnote{All developed source code for this project is available at ...}
 
 \subsection{Tasks}
+\label{sec:tasks}
 
 We break the project into six areas of work. Each builds on the ones before it,
 and we plan to get the simplest version of the full pipeline (environment,
@@ -177,30 +178,31 @@ agent, harness, one experiment) working before adding complications.
 \subsection{Environment}
 
 All experiments run in our own simulated environment, built on
-pyroomacoustics. In the base configuration, a head with two microphones 15\,cm
-apart sits in a quiet $8 \times 8$\,m room with no echoes. The head can face
-any of 24 directions (15$^\circ$ steps), and a stationary source 2\,m away sits
-at one of 72 angles (5$^\circ$ steps). Each episode starts with a random head
-direction and a random source angle. The agent observes the current
-time-difference bucket (nine buckets from far left to far right), the bucket
-before its last turn, and the direction of that turn. It can turn left, turn
-right, or declare that the source is straight ahead. Each step costs $-1$, a
-correct declaration (source within 7.5$^\circ$ of the facing direction) earns
-$+20$, and a wrong one earns $-20$. An episode ends at the declaration or is
-cut off after 50 steps. Later experiments add echoes, competing sounds, sensor
-and motor errors, and a moving source to this base.
+pyroomacoustics and specified in Section~\ref{sec:tasks}. A two-microphone
+head turns in $9^\circ$ steps, so it can face 40 directions, and a stationary
+source sits at an azimuth the agent never observes. On each step the agent
+receives a noisy time difference between the microphones and chooses to turn
+left, turn right, listen again, or stop and declare that the source is in the
+direction it is facing. Each step costs $-1$, and a declaration earns
+$100\,(1 - \Delta\theta/\pi)$, where $\Delta\theta$ is the angle between the
+facing direction and the source. Each episode starts with the head direction
+and the source azimuth drawn uniformly at random. The base condition has no
+echoes and no observation noise ($\sigma = 0$). Later conditions raise
+$\sigma$ and add echoes.
 
 \subsection{Metrics}
 
 We evaluate each trained agent with its greedy policy and exploration turned
-off. The base environment has only $24 \times 72 = 1{,}728$ starting
-configurations and is deterministic, so we evaluate on all of them rather than
-on a sample. We report three primary measures.
+off, on a fixed set of 1{,}000 evaluation episodes per condition. The set is
+generated once from fixed random seeds, so every agent and baseline faces the
+same starting configurations and the same noise. We report three primary
+measures.
 
 \begin{enumerate}
-  \item \textbf{Completion rate.} The fraction of evaluation episodes that end
-  in a correct declaration. Wrong declarations and episodes cut off at the step
-  limit both count as failures.
+  \item \textbf{Completion rate.} The fraction of evaluation episodes in which
+  the agent declares with the source within one turn of the direction it is
+  facing ($\Delta\theta \le \pi/20$). Declarations outside this tolerance and
+  episodes cut off at the step limit both count as failures.
   \item \textbf{Learning curve.} Average return per episode against the number
   of training episodes, averaged over at least 10 random seeds with the spread
   across seeds shown. We use it to judge whether and how quickly each
@@ -208,51 +210,55 @@ on a sample. We report three primary measures.
   \item \textbf{Fraction of optimal return.} The agent's average return
   divided by the average return of an oracle that knows where the source is,
   plotted over training alongside the learning curve. The oracle turns the
-  short way round and declares, so from a start that is $d$ turns away from
-  the source its return is
+  short way round to the direction nearest the source and declares. A $9^\circ$
+  turn costs 1 and raises the declaration reward by 5, so turning all the way
+  is always worthwhile. From a start that is $d$ turns from that direction,
+  the oracle's return is
   \begin{equation}
-    G^{*} = 20 - (d + 1),
+    G^{*} = 100\left(1 - \frac{\Delta\theta_{\min}}{\pi}\right) - (d + 1),
   \end{equation}
-  which averages 13.0 over all starting configurations. The oracle skips the
-  listening that a real agent needs, so 100\% is an upper bound rather than a
-  target. The bound is tight in the base environment: a preliminary
-  hand-written strategy (turn toward the sound until it is centered, with one
-  extra turn to check front against back when the sound starts out centered)
-  earns an average return of 12.92, or 99.4\% of the oracle's.
+  where $\Delta\theta_{\min} \le \pi/40$ is the error that remains at the
+  nearest direction. Averaged over uniformly random starts, $G^{*}$ is about
+  88. The oracle skips the turning and listening that a real agent needs in
+  order to find the source, so 100\% is an upper bound rather than a target.
+  At the other end, an agent that declares at once without turning earns 49
+  on average, about 56\% of the oracle's return, so values near that level
+  indicate that nothing has been learned.
 \end{enumerate}
 
-As secondary measures we report the number of steps taken before declaring and
-the angular error at the declaration. For reference, a uniformly random policy
-completes 3.7\% of episodes with an average return of $-21.5$.
+As secondary measures we report the angular error at the declaration, the
+number of steps taken before declaring, and how many of those steps are
+spent listening rather than turning.
 
 \subsection{Success Criteria}
 
-In the base environment, we consider an agent successful if it completes at
-least 99\% of the 1,728 evaluation episodes, its learning curve levels off
-across seeds, and it reaches at least 95\% of the oracle's return. The
-hand-written strategy completes 100\% of episodes, so the completion threshold
-is attainable with the observations the agent receives. For the project as a
-whole, success means that at least the tabular agents meet these criteria and
-that we can compare all agents against both baselines in the harder
+In the base condition, we consider an agent successful if it completes at
+least 99\% of the evaluation episodes, its learning curve levels off across
+seeds, and it reaches at least 90\% of the oracle's return. We will run the
+hand-written strategy first to confirm that these thresholds are attainable
+with the observations the agent receives; if that strategy falls short of
+them, we will say so and judge the agents against it instead. For the project
+as a whole, success means that at least the tabular agents meet these criteria
+and that we can compare all agents against both baselines in the harder
 conditions. In those conditions no fixed threshold is meaningful in advance,
-because noise may make some episodes impossible to solve, so we report each
-agent's completion rate and return relative to the hand-written strategy
-under the same condition.
+because noise and echoes may make some episodes impossible to solve, so we
+report each agent's completion rate and return relative to the hand-written
+strategy under the same condition. If the physical heads are built, we will
+also run the trained agents on them in a real room as a check on the
+simulated results, without a pass threshold.
 
 \subsection{Hypotheses}
 
 \begin{enumerate}
-  \item In the base environment, every learning agent reaches the success
-  criteria and matches the hand-written strategy, but none exceeds it by a
-  meaningful margin, because that strategy is already within 1\% of the
-  oracle.
-  \item The agents learn the front-back check without being told about it: in
-  states where the sound starts out centered, the learned policy turns before
-  it declares.
-  \item With echoes, competing sounds, or sensor and motor errors, the learned
-  agents lose less completion rate and return than the hand-written strategy,
-  because they can adapt their turning to the errors while the hand-written
-  rule cannot.
+  \item In the base condition, every learning agent meets the success criteria
+  and matches the hand-written strategy's return.
+  \item The agents learn the front-back check without being told about it:
+  when the sound starts out centered, the learned policy turns before it
+  declares.
+  \item As observation noise increases, the learned agents listen more often
+  before they turn or declare, and they lose less completion rate and return
+  than the hand-written strategy, whose rule does not change with the noise
+  level.
 \end{enumerate}
 
 % for final report
