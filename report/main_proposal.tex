@@ -27,7 +27,7 @@
 
 When you hear a sound you cannot place, you rarely stay still. You turn your head, listening as your head turns towards the predicted location of the source, gathering information until the location of the sound source is solidified. Listening is an active process. Where you turn your head determines the cues that you hear, and what you hear determines where you should turn your head to optimize the information that is received next. This project asks whether a reinforcement learning agent can learn to do that same skill.
 
-This experiment proposes a simplified version of the problem of audio source localization, also known as sound localization. There is a "head", which can be represented in programming simulation or in hardware as two microphones sitting on a motorized "head" that can turn left and right, and somewhere in the room is a sound source, which may be static or dynamic. The agent's job is to identify where the sound is coming from as accurately and quickly as possible. Keeping the head still is often not enough to locate a sound. With only two microphones, similar to having only two ears, there is cone of confusion where different sound sources have identical interaural time (ITD) and level (ILD) difference cues. Because the sound cues are identical, this creates the brain has trouble identifying where the sound is coming from, confusing between hemifield sound sources such as front/back horizontally or above/below vertically. For example, the sound from 0 degrees azimuth and 180 degrees azimuth essentially provide identical sound cues, so a stationary listener cannot reliably tell the location of the sound source \cite{kapralos2008virtualaudiosystems}. Turning the head, and thus creating dynamic ITD and ILD sound cues associated with head rotation helps listeners to resolve ambiguities in sound localization \cite{Wallach1940headmovement}. However, when considering this phenomenon, every turn costs time and energy, and in real life applications, a moving sound source will not wait for the agent. Therefore the agent faces a planning problem where it has to decide how to turn so that it maximizes collection of information to locate the sound source without wasting effort on movements that provide minimal information and know when it has heard enough to commit to an answer.
+This experiment proposes a simplified version of the problem of audio source localization, also known as sound localization. There is a "head", which can be represented in programming simulation or in hardware as two microphones sitting on a motorized "head" that can turn left and right, and somewhere in the room is a sound source, which may be static or dynamic. The agent's job is to identify where the sound is coming from as accurately and quickly as possible. Keeping the head still is often not enough to locate a sound. With only two microphones, similar to having only two ears, there is cone of confusion where different sound sources have identical interaural time (ITD) and level (ILD) difference cues. Because the sound cues are identical, this creates the brain has trouble identifying where the sound is coming from, confusing between hemifield sound sources such as front/back horizontally or above/below vertically. For example, the sound from 0 degrees azimuth (the horizontal angle of the source around the head, with 0 degrees straight ahead) and 180 degrees azimuth essentially provide identical sound cues, so a stationary listener cannot reliably tell the location of the sound source \cite{kapralos2008virtualaudiosystems}. Turning the head, and thus creating dynamic ITD and ILD sound cues associated with head rotation helps listeners to resolve ambiguities in sound localization \cite{Wallach1940headmovement}. However, when considering this phenomenon, every turn costs time and energy, and in real life applications, a moving sound source will not wait for the agent. Therefore the agent faces a planning problem where it has to decide how to turn so that it maximizes collection of information to locate the sound source without wasting effort on movements that provide minimal information and know when it has heard enough to commit to an answer.
 
 \begin{figure}[htbp]
   \centering
@@ -85,27 +85,173 @@ Prior active-localization systems rely on manually-designed or search-based moti
 \section{Technical Approach / Methodology / Theoretical Framework}
 
 % for proposal
-Describe how you will approach the problem and its technical formulation. Feel free to re-state the basic RL formulas (e.g., if using Q-learning, state the update rule or the formula for what the Q function approximates). 
+We treat active sound localization as an episodic decision problem in which
+the agent cannot see the quantity it is trying to estimate. We simulate the
+acoustics, train several agents from Sutton and
+Barto~\cite{sutton1998reinforcement} that range from tabular methods to policy
+gradients, and compare them against fixed strategies. This section gives the
+formulation, the simulation, and the agents. Section~\ref{sec:evaluation}
+describes how we judge the results.
+
+\subsection{Problem Formulation}
+\label{sec:formulation}
+
+\textbf{Hidden state.} The source sits at a fixed azimuth $\theta$ and the
+head faces the angle $\hat\theta_t$ at step $t$. The agent observes neither.
+Each episode starts with both drawn uniformly at random.
+
+\textbf{Observation.} The agent's only input is the interaural time difference
+(ITD), the difference in the sound's arrival time at the two microphones. For
+a distant source at relative azimuth $\varphi_t = \theta - \hat\theta_t$,
+measured from straight ahead, the ITD is approximately
+\begin{equation}
+  \tau(\varphi_t) = \frac{b}{c} \sin \varphi_t ,
+  \label{eq:itd}
+\end{equation}
+where $b$ is the distance between the microphones and $c$ is the speed of
+sound. The agent receives a noisy reading
+\begin{equation}
+  o_t = \tau(\varphi_t) + \varepsilon_t, \qquad
+  \varepsilon_t \sim \mathcal{N}(0, \sigma^2),
+\end{equation}
+where $\sigma$ is an experimental parameter. For agents that need discrete
+inputs, $o_t$ is bucketed into five bins: far left, left, center, right, and
+far right.
+
+Equation~\ref{eq:itd} shows why a single reading is not enough. Because
+$\sin\varphi = \sin(\pi - \varphi)$, a source in front of the head and its
+mirror image behind the head produce the same ITD
+(Figure~\ref{fig:front-back-ambiguity}). After the head turns, the two cases
+produce different ITDs, so a turn followed by a second reading separates them.
+The problem is therefore partially observable, and what the agent needs to
+know has to be gathered through its own actions.
+
+\textbf{Actions.} The agent can turn left, turn right, listen, or stop and
+declare the direction. A turn moves the head by $\pi/20 = 9^\circ$, which
+corresponds to 5 steps of a NEMA~17 stepper motor, so the head can face 40
+directions. Listening leaves the head in place and returns a new reading.
+Declaring names the direction the head is facing, $\hat\theta_t$, as the
+agent's answer.
+
+\textbf{Reward.} Every step costs $-1$. A declaration also earns
+\begin{equation}
+  r = 100\left(1 - \frac{\Delta\theta}{\pi}\right), \qquad
+  \Delta\theta = \arccos\bigl(\cos(\theta - \hat\theta_t)\bigr) \in [0, \pi],
+\end{equation}
+where $\Delta\theta$ is the angle between the true and declared directions,
+measured the short way around the circle. The reward therefore favors answers
+that are both accurate and quick.
+
+\textbf{Termination.} The episode ends when the agent declares, or without a
+declaration reward after a maximum number of steps. Because episodes are
+finite and the step cost already penalizes delay, we do not discount
+($\gamma = 1$), and the agent maximizes the expected return
+$G_t = R_{t+1} + R_{t+2} + \dots + R_T$.
+
+\subsection{Simulation}
+
+We simulate the room with pyroomacoustics~\cite{scheibler2018pyroomacoustics},
+which produces the signal each microphone records from a source playing short
+bursts of white noise. We estimate the ITD from the two signals by generalized
+cross-correlation with phase transform~\cite{knapp1976generalized}. Running the
+simulation on every step would make training slow, so we compute the ITD once
+for every pair of head angle and source azimuth and store the results in a
+table. During training, a step is a table lookup plus the noise
+$\varepsilon_t$. The base room has no echoes. Echoes and a second axis of
+rotation are added later as separate configurations, each with its own table.
+
+\subsection{Agents}
+
+\textbf{Agent state.} Since one reading is ambiguous, every agent acts on a
+short history rather than on $o_t$ alone: the current reading, the previous
+reading, and the previous action,
+\begin{equation}
+  S_t = (o_t,\; o_{t-1},\; A_{t-1}).
+\end{equation}
+This is the least memory that can separate front from back. With bucketed
+readings there are $5 \times 6 \times 4 = 120$ states (five bins, five bins
+or ``no previous reading'', and three previous actions or none), which is
+small enough for a table.
+
+\textbf{Tabular Q-learning and SARSA.} Both learn action values $Q(s, a)$ over
+the bucketed state and act $\varepsilon$-greedily. Q-learning updates toward
+the best next action,
+\begin{equation}
+  Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \bigl[ R_{t+1} +
+  \gamma \max_{a} Q(S_{t+1}, a) - Q(S_t, A_t) \bigr],
+\end{equation}
+and SARSA updates toward the action it actually takes next,
+\begin{equation}
+  Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \bigl[ R_{t+1} +
+  \gamma\, Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t) \bigr].
+\end{equation}
+Comparing the two shows whether learning off-policy or on-policy matters when
+exploratory turns are costly.
+
+\textbf{Semi-gradient SARSA with tile coding.} Bucketing discards most of the
+information in the ITD. This agent keeps the readings continuous and
+approximates the action value as a linear function
+$\hat q(s, a, \mathbf{w}) = \mathbf{w}^{\top} \mathbf{x}(s, a)$, where
+$\mathbf{x}(s, a)$ is a tile coding of the two readings, kept separately for
+each previous action and each action. The update is
+\begin{equation}
+  \mathbf{w} \leftarrow \mathbf{w} + \alpha \bigl[ R_{t+1} +
+  \gamma\, \hat q(S_{t+1}, A_{t+1}, \mathbf{w}) - \hat q(S_t, A_t, \mathbf{w})
+  \bigr] \mathbf{x}(S_t, A_t).
+\end{equation}
+
+\textbf{REINFORCE with a baseline.} This agent learns a policy directly. The
+policy $\pi(a \mid s, \mathbf{u})$ is a softmax over linear action preferences
+on the same tile-coded features, and a learned state value
+$\hat v(s, \mathbf{w})$ serves as the baseline. We write the policy
+parameters as $\mathbf{u}$ because $\theta$ already denotes the source
+azimuth. After each episode, for every step $t$, we compute the error
+$\delta = G_t - \hat v(S_t, \mathbf{w})$ and update
+\begin{equation}
+  \mathbf{w} \leftarrow \mathbf{w} + \alpha_{w}\, \delta\,
+  \nabla \hat v(S_t, \mathbf{w}), \qquad
+  \mathbf{u} \leftarrow \mathbf{u} + \alpha_{u}\, \delta\,
+  \nabla \ln \pi(A_t \mid S_t, \mathbf{u}).
+\end{equation}
+A policy-gradient agent can learn a stochastic policy, which can do better
+than any deterministic one when different hidden states look the same to the
+agent. If the episode-length returns prove too noisy, we will switch to
+one-step actor-critic, which replaces $G_t$ with
+$R_{t+1} + \gamma\, \hat v(S_{t+1}, \mathbf{w})$.
+
+\textbf{DQN (stretch).} If time allows, we replace the tile coding with a
+small neural network trained by Q-learning with experience replay and a target
+network, which would let the agent use a longer history of readings.
+
+\textbf{Baselines.} A random policy chooses uniformly among the four actions.
+A hand-written strategy turns toward the sound until it is centered, checks
+front against back with one extra turn, and then declares. An oracle that
+knows $\theta$ gives an upper bound on the return
+(Section~\ref{sec:evaluation}).
 
 
 % for final report
 %A detailed description of your problem (with math, notation, algorithms, figures, etc.). Use footnotes to cite links to your code or videos\footnote{All developed source code for this project is available at ...}
 
 \subsection{Tasks}
+\label{sec:tasks}
 
 We break the project into six areas of work. Each builds on the ones before it,
 and we plan to get the simplest version of the full pipeline (environment,
 agent, harness, one experiment) working before adding complications.
 
 \begin{enumerate}
-  \item \textbf{Simulation environment.} A simulated room in which a
-  two-microphone head turns left and right and listens to a sound source.
+  \item \textbf{Simulation environment.} The simulated room and the environment
+  defined in Section~\ref{sec:formulation}.
   \begin{enumerate}
-    \item Hidden state (never observed by the agent): the true azimuth of the sound source ${\theta}$, and the current head angle ${\hat\theta}$.
-    \item Observation (the agent's input): interaural time difference (ITD) precalculated by pryoomacoustics, an acoustics python package, for each head angle and source azimuth. Noise is added as $\varepsilon_t \sim \mathcal{N}(0, \sigma^2)$ for each sample, where $\sigma$ is an experimental parameter. For agents that can only use discrete observations, the ITD is bucketed into 5 bins: far left, left, center, right, and far right.
-    \item Actions: turn left, turn right, listen, stop and declare the direction. Turns move $\pi / 20 \approx 9^\circ$ which corresponds to 5 steps of NEMA 17 stepper motors. 
-    \item Rewards: $-1$ per step, $$r = 100\left(1 - \frac{\Delta\theta}{\pi}\right)$$ where $\Delta\theta = \arccos\bigl(\cos(\theta - \hat{\theta})\bigr) \in [0, \pi]$ is the angle between the true and guessed directions, measured the short way around the circle.
-    \item Episode termination: when the agent declares the direction or after a maximum number of steps.
+    \item Base room in pyroomacoustics: no echoes, one stationary source
+    playing short bursts of white noise.
+    \item Precomputed ITD table over head angles and source azimuths, so
+    that training runs quickly.
+    \item Observation model: noise with configurable $\sigma$, and the
+    five-bin bucketing for agents that need discrete inputs.
+    \item Environment interface: actions, reward, and episode termination as
+    defined in Section~\ref{sec:formulation}.
     \item Configurable complications, added one at a time: echoes, noise, and a second axis of rotation.
   \end{enumerate}
 
@@ -173,8 +319,93 @@ agent, harness, one experiment) working before adding complications.
 
 % for proposal
 \section{Evaluation}
+\label{sec:evaluation}
 
-Describe how you will evaluate your approach/solution. What constitutes success? What metrics will you use? Do you have any preliminary hypothesis that you plan to test? Also, describe the RL domain or environment you plan to use. 
+\subsection{Environment}
+
+All experiments run in our own simulated environment, built on
+pyroomacoustics and specified in Section~\ref{sec:formulation}. A two-microphone
+head turns in $9^\circ$ steps, so it can face 40 directions, and a stationary
+source sits at an azimuth the agent never observes. On each step the agent
+receives a noisy time difference between the microphones and chooses to turn
+left, turn right, listen again, or stop and declare that the source is in the
+direction it is facing. Each step costs $-1$, and a declaration earns
+$100\,(1 - \Delta\theta/\pi)$, where $\Delta\theta$ is the angle between the
+facing direction and the source. Each episode starts with the head direction
+and the source azimuth drawn uniformly at random. The base condition has no
+echoes and no observation noise ($\sigma = 0$). Later conditions raise
+$\sigma$ and add echoes.
+
+\subsection{Metrics}
+
+We evaluate each trained agent with its greedy policy and exploration turned
+off, on a fixed set of 1{,}000 evaluation episodes per condition. The set is
+generated once from fixed random seeds, so every agent and baseline faces the
+same starting configurations and the same noise. We report three primary
+measures.
+
+\begin{enumerate}
+  \item \textbf{Completion rate.} The fraction of evaluation episodes in which
+  the agent declares with the source within one turn of the direction it is
+  facing ($\Delta\theta \le \pi/20$). Declarations outside this tolerance and
+  episodes cut off at the step limit both count as failures.
+  \item \textbf{Learning curve.} Average return per episode against the number
+  of training episodes, averaged over at least 10 random seeds with the spread
+  across seeds shown. We use it to judge whether and how quickly each
+  algorithm converges.
+  \item \textbf{Fraction of optimal return.} The agent's average return
+  divided by the average return of an oracle that knows where the source is,
+  plotted over training alongside the learning curve. The oracle turns the
+  short way round to the direction nearest the source and declares. A $9^\circ$
+  turn costs 1 and raises the declaration reward by 5, so turning all the way
+  is always worthwhile. From a start that is $d$ turns from that direction,
+  the oracle's return is
+  \begin{equation}
+    G^{*} = 100\left(1 - \frac{\Delta\theta_{\min}}{\pi}\right) - (d + 1),
+  \end{equation}
+  where $\Delta\theta_{\min} \le \pi/40$ is the error that remains at the
+  nearest direction. Averaged over uniformly random starts, $G^{*}$ is about
+  88. The oracle skips the turning and listening that a real agent needs in
+  order to find the source, so 100\% is an upper bound rather than a target.
+  At the other end, an agent that declares at once without turning earns 49
+  on average, about 56\% of the oracle's return, so values near that level
+  indicate that nothing has been learned.
+\end{enumerate}
+
+As secondary measures we report the angular error at the declaration, the
+number of steps taken before declaring, and how many of those steps are
+spent listening rather than turning.
+
+\subsection{Success Criteria}
+
+In the base condition, we consider an agent successful if it completes at
+least 99\% of the evaluation episodes, its learning curve levels off across
+seeds, and it reaches at least 90\% of the oracle's return. We will run the
+hand-written strategy first to confirm that these thresholds are attainable
+with the observations the agent receives; if that strategy falls short of
+them, we will say so and judge the agents against it instead. For the project
+as a whole, success means that at least the tabular agents meet these criteria
+and that we can compare all agents against both baselines in the harder
+conditions. In those conditions no fixed threshold is meaningful in advance,
+because noise and echoes may make some episodes impossible to solve, so we
+report each agent's completion rate and return relative to the hand-written
+strategy under the same condition. If the physical heads are built, we will
+also run the trained agents on them in a real room as a check on the
+simulated results, without a pass threshold.
+
+\subsection{Hypotheses}
+
+\begin{enumerate}
+  \item In the base condition, every learning agent meets the success criteria
+  and matches the hand-written strategy's return.
+  \item The agents learn the front-back check without being told about it:
+  when the sound starts out centered, the learned policy turns before it
+  declares.
+  \item As observation noise increases, the learned agents listen more often
+  before they turn or declare, and they lose less completion rate and return
+  than the hand-written strategy, whose rule does not change with the noise
+  level.
+\end{enumerate}
 
 % for final report
 %\section{Conclusion and Future Work}
