@@ -25,3 +25,6 @@ venv/
 # Simulation cache
 .cache/
 *.egg-info/
+
+# Personal, not shared with the team
+spec/working_with_harris.md
