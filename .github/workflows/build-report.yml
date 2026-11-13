@@ -48,10 +48,42 @@ jobs:
           done
           exit $status
 
-      - name: Upload PDFs
-        if: always()
-        uses: actions/upload-artifact@v4
+      # Upload each PDF on its own, unzipped (archive: false needs
+      # upload-artifact v7 and takes a single file), so each one downloads
+      # directly as a PDF and opens in the browser.
+      - name: Upload proposal PDF
+        id: upload-proposal
+        if: always() && hashFiles('report/build/main_proposal.pdf') != ''
+        uses: actions/upload-artifact@v7
         with:
-          name: report-pdfs
-          path: report/build/*.pdf
-          if-no-files-found: ignore
+          path: report/build/main_proposal.pdf
+          archive: false
+
+      - name: Upload final report PDF
+        id: upload-final
+        if: always() && hashFiles('report/build/main_final.pdf') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          path: report/build/main_final.pdf
+          archive: false
+
+      - name: Add download links to the run summary
+        if: always()
+        env:
+          PROPOSAL_URL: ${{ steps.upload-proposal.outputs.artifact-url }}
+          FINAL_URL: ${{ steps.upload-final.outputs.artifact-url }}
+        run: |
+          {
+            echo "## Report PDFs"
+            echo
+            if [ -n "$PROPOSAL_URL" ]; then
+              echo "- Proposal: [main_proposal.pdf]($PROPOSAL_URL)"
+            else
+              echo "- Proposal: not built"
+            fi
+            if [ -n "$FINAL_URL" ]; then
+              echo "- Final report: [main_final.pdf]($FINAL_URL)"
+            else
+              echo "- Final report: not built"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
