@@ -1,0 +1,57 @@
+name: Build report
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "report/**"
+      - ".github/workflows/build-report.yml"
+  pull_request:
+    paths:
+      - "report/**"
+      - ".github/workflows/build-report.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile proposal and final report
+        uses: xu-cheng/latex-action@v3
+        with:
+          working_directory: report
+          root_file: |
+            main_proposal.tex
+            main_final.tex
+          args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -outdir=build
+
+      # latexmk succeeds even when citations are missing, so check the logs.
+      # Missing citations fail the proposal; the final report only warns until
+      # its template text is replaced.
+      - name: Check for undefined citations and references
+        working-directory: report/build
+        run: |
+          status=0
+          for doc in main_proposal main_final; do
+            missing=$(grep -E "(Citation|Reference) .* undefined" "$doc.log" | sed -E "s/.*(Citation|Reference) \`([^']*)'.*/\2/" | sort -u)
+            [ -z "$missing" ] && continue
+            for key in $missing; do
+              if [ "$doc" = main_proposal ]; then
+                echo "::error file=report/$doc.tex::Undefined citation or reference: $key"
+                status=1
+              else
+                echo "::warning file=report/$doc.tex::Undefined citation or reference: $key"
+              fi
+            done
+          done
+          exit $status
+
+      - name: Upload PDFs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-pdfs
+          path: report/build/*.pdf
+          if-no-files-found: ignore
