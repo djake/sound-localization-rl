@@ -419,7 +419,7 @@ Turning toward the sound brings a source behind the head round to the front with
 - **Sample centered starts more often** in training, in evaluation, or both.
 - **Reframe.** "Turning toward the sound resolves most front–back confusion for free" would itself be a finding, with the explicit check as the edge case.
 
-More noise widens the set of starts that look centered, so the check may matter more in E2 than in E1.
+In the homework numbers the check's value did not grow with noise: about 24 points at σ = 20 µs, 20 at 40 µs, and 16 at 80 µs. At 80 µs, one extra reading gained about as much as the check did (15 points).
 
 ### OQ19. Do we adopt the homework's baselines and balanced evaluation?
 §4.8 and §4.9 now carry the homework's design as a draft: three hand-written baselines (no memory, check, check + k readings) and evaluation with 25 episodes from each of the 40 starting directions. Confirm or change:
