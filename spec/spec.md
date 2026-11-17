@@ -9,7 +9,7 @@ This is the one document that describes what we are building. It holds only what
 - **Section status.** Each section is marked **Draft** (still changing), **Agreed** (the team has reviewed it), or **Frozen** (ready to build from). Coding agents build only from Frozen sections. Everything is Draft until the team's first review.
 - **IDs.** Hypotheses (H1…), experiments (E0…), stretch goals (S1…), code requirements (R1…), acceptance tests (AT1…), open questions (OQ1…), and decisions (D1…) keep their IDs for the life of the project. IDs are never reused.
 - **⚠ marks** a value that depends on an open question. The full list of open questions is in [Section 7](#7-open-questions).
-- **Source column** in the tables: **P** = proposal · **Dn** = a decision in [decisions.md](decisions.md) · **Spike** = the [calibration test](../spikes/reverb_itd/RESULTS.md) · **HW3** = [findings from Harris's Homework 3](../spikes/hw3_formula/FINDINGS.md), which ran hand-written policies on a formula-only version of this environment · **New** = first written down here, so it especially needs review.
+- **Source column** in the tables: **P** = proposal · **Dn** = a decision in [decisions.md](decisions.md) · **Spike** = the [calibration test](../spikes/reverb_itd/RESULTS.md) · **HW3** = [findings from Harris's Homework 3](../spikes/hw3_formula/FINDINGS.md), which ran hand-written policies on a formula-only version of this environment · **Head spike** = the [simulated-head test](../spikes/kemar_head/RESULTS.md) · **New** = first written down here, so it especially needs review.
 - **Later:** when a section is Frozen and needs build-level detail (interfaces, file formats, tasks), that detail goes in its own file under `spec/components/`. This document keeps the summary and links to it.
 
 ---
@@ -71,7 +71,7 @@ All training happens in one moderately reverberant room. There is no reverb swee
 |---|---|
 | Competing sounds | A whole new dimension (D12). |
 | Microphone errors | Gain mismatch doesn't affect ITD (D12). |
-| Level differences (ILD) and other cues | The simulator has no head, so ILD is under 1 dB and carries nothing ITD doesn't (D5). |
+| Level differences (ILD) and other cues | With the default point mics, ILD is under 1 dB and carries nothing ITD doesn't (D5). With a simulated head (§4.12) ILD would be a real cue, and level differences by frequency band settle front vs. back from one reading (Head spike). Whether to study that is part of ⚠ OQ21. |
 | A second axis of rotation (tilt) | Multiplies the table size and the state space. Not on the stretch list. |
 | A new random room every episode | Would need live simulation, which is ~1,000× slower per step. Held-out rooms (E3) cover the same concern. |
 
@@ -116,7 +116,7 @@ Every setting of the problem, with its default value.
 | Head position | Off-center, e.g. (2.6, 2.2, 1.2) m in R0 | D10 | Off-center avoids symmetric reflections that could make the room artificially easy. |
 | Rotation | Left-right only (yaw), about a vertical axis through the midpoint between the mics | P, D9 | |
 | Mic spacing b | 0.18 m | D10 | Match hardware if built (⚠ OQ11). |
-| Mics | 2 omnidirectional point mics, symmetric about the axis | D5, D9 | |
+| Receiver | 2 omnidirectional point mics, symmetric about the axis | D5, D9, D22 | The receiver is a table-builder setting. A simulated head is specified as an option in §4.12. Whether and how it is used is ⚠ OQ21. |
 | Source distance | 1.75 m from head center, at ear height | D10 | Horizontal plane only. |
 | Source azimuth grid | 40 values, 9° apart, **on the same grid as the headings** | D14 | Changed from the proposal, which implied a source anywhere on the circle. |
 | Source motion | Static within an episode | P | Moving source is S1. |
@@ -143,9 +143,9 @@ o_t = r_t + ε_t
 | Parameter | Default | Source | Notes |
 |---|---|---|---|
 | Acoustic pipeline | One pipeline for everything: pyroomacoustics recordings → GCC-PHAT → ITD | D4 | The formula τ(φ) is used only to explain the base case in the report and as test AT1. |
-| Table shape | 40 headings × 40 source azimuths per room, indexed `[heading_idx][source_idx]` | D7, D14 | Every cell is a geometry that can actually occur. |
-| Readings per cell K | 200, each from a different random noise burst | D7 | Built once per room (~5–15 min on one laptop core), shared by all seeds. |
-| ITD estimator | GCC-PHAT, sub-sample (parabolic) interpolation, lag search limited to ±b/c | D4, Spike | Pick the **largest positive** peak, not the largest absolute value (a bug noted in `sim/`). |
+| Table shape | 40 headings × 40 source azimuths per room, indexed `[heading_idx][source_idx]` | D7, D14 | Every cell is a geometry that can actually occur. One table per combination of room, sound (§4.3), and receiver (§4.2). |
+| Readings per cell K | 200, each from a different random noise burst | D7 | Built once per room (~5–15 min on one laptop core with point mics), shared by all seeds. |
+| ITD estimator | GCC-PHAT, sub-sample (parabolic) interpolation, lag search limited to ±b/c | D4, Spike | Pick the **largest positive** peak, not the largest absolute value (a bug noted in `sim/`). These settings are for point mics. The head option needs a wider lag search and a shorter analysis window (§4.12). |
 | Internal noise σ, base condition | 20 µs | New, D6 | ⚠ OQ4. Hides the room's faint front/back cue (Spike). Small next to the 82 µs ITD change from one turn away from center. |
 | σ sweep (E2) | {10, 20, 40, 80, 160} µs | New | ⚠ OQ4. 160 µs ≈ two turns' worth of ITD change, which should be hard. In the homework test it was too hard to be informative: the hand-written policies dithered until the step limit (HW3). |
 | What the agent sees | Only o_t. Never θ, ĥ_t, or φ_t. | P | Hidden state is logged for analysis (R4) but never passed to agents. |
@@ -250,6 +250,27 @@ The simulation is kept compatible with a simple physical rig, so S2 stays possib
 - **Swappable acoustic front end.** The environment asks a front end for an ITD reading at the current geometry. In simulation the front end draws from the table. On hardware it records a burst and calls the ITD function. Episode logic, agents, and the harness don't know which one is in use.
 - **Simulated settings match a simple rig:** one rotation axis, stepper-motor turns, two omnidirectional mics on a single stereo interface (one shared clock, which valid ITD requires), 48 kHz, and a speaker playing white-noise bursts.
 - **The agent listens only while stopped.** Readings are taken after the motor finishes moving, so motor noise never reaches a reading.
+- **The point-mic receiver is the one that matches this rig.** A table built with the simulated head (§4.12) would match only a rig with a physical head or baffle between the mics (⚠ OQ21, OQ11).
+
+### 4.12 Optional receiver: a simulated head
+
+*Not part of the core. Whether and how it is used is ⚠ OQ21.*
+
+pyroomacoustics can replace the two point mics with a measured dummy head, the MIT KEMAR. It is a table-builder setting: choosing it produces a different table, and the environment, agents, reward, and harness don't change. The agent still receives one ITD number per reading. The values below come from one small test (Head spike) and are what a head table would need in order to be correct.
+
+| Parameter | Value with the head | Source | Notes |
+|---|---|---|---|
+| Head model | MIT KEMAR, normal pinna (Gardner & Martin, 1994) | Head spike | Free to use if cited. Loaded with pyroomacoustics' `MeasuredDirectivityFile`. Both ears sit at the head center and each ear's measured response is rotated with the heading. The ITD comes from the measured responses, so the spacing b is not used. |
+| Direction lookup | Nearest measured direction (`interp_order=None`) | Head spike | The interpolated mode corrupts ITD and collapses it to about 0 µs in a reverberant room. KEMAR is measured every 5°, so the lookup is at most 2.5° off our 9° grid. |
+| ITD range | Up to about 820 µs, near 108° (just behind the ear) | Head spike | Point mics peak at 525 µs at 90°. The curve is bumpier than a sine. The reference for tests is KEMAR's own echo-free table, not τ(φ). |
+| Lag search | ±1 ms | Head spike | ±b/c would cut off the largest ITDs. |
+| Analysis window | Only the first few ms after the sound arrives | Head spike | The full 100 ms window fails in reverb with a head: readings were off by more than 100 µs 43% of the time at RT60 0.4 s. ⚠ The exact window length is not pinned down, and the spike placed the window using the known emission time. A physical rig would have to detect the arrival. |
+| Bins (§4.4) | Unchanged | Head spike | One turn from center is still 82 µs, so the ±40 µs edge works. ±260 µs falls near 33° with the head. |
+| Front/back hint in ITD | Mirror angles differ by 10–20 µs | Head spike | One reading told front from back 71% of the time at σ = 20 µs with no echoes (47% with point mics). It belongs to the head, so it would carry over to other rooms. It doesn't help when the source is directly behind, where the ITD is 0 either way. |
+| Table build time | About 2–2.5 core-hours per room (estimate) | Head spike | Against 5–15 minutes for point mics. Scaled from a cloud machine and not yet timed on a laptop. Built once and cached. |
+| Extra dependencies | `python-sofa`, `netCDF4`, and the KEMAR SOFA file | Head spike | The spike loaded the data through the `slab` package as a workaround. The standard download path is untested. |
+
+**Limits of the test.** One head direction (facing 0°), one room, 20 bursts per cell. A rotating head, laptop build time, and the analysis window need a short follow-up test before any head table is used for results.
 
 ## 5. Conventions
 
@@ -270,7 +291,7 @@ Each test is implemented as an automated test and must pass before the component
 
 ### AT1. The echo-free table matches the ITD formula
 - **Covers:** table builder and ITD estimator (§4.4)
-- **Setup:** room with no reflections (max_order = 0), no mic noise, no internal noise, default b, fs, and signal.
+- **Setup:** point-mic receiver, room with no reflections (max_order = 0), no mic noise, no internal noise, default b, fs, and signal.
 - **Pass:** for every (heading_idx, source_idx) cell, the mean table reading is within **1 sample (≈ 20.8 µs at 48 kHz)** of τ(φ) = (b/c)·sin φ, using the sign convention in §4.1. The spike achieved 0.6 µs, so a much tighter tolerance (e.g. 2 µs) is a reasonable target.
 
 ### AT2. Grid-index conversions round-trip and wrap correctly
@@ -286,6 +307,21 @@ Each test is implemented as an automated test and must pass before the component
   2. Replaying one fixed action sequence in the same episode (same seed, same episode number) twice returns identical readings at every step.
   3. Changing only the agent, or only the agent's settings (e.g. exploration rate), leaves items 1 and 2 unchanged.
   4. Changing the seed changes the episode starts.
+
+### AT4. An echo-free table depends only on the relative direction
+- **Covers:** how the table builder turns the receiver (§4.2, §4.12). Applies to every receiver.
+- **Setup:** room with no reflections, no mic noise, no internal noise.
+- **Pass:** any two cells with the same (source_idx − heading_idx) mod 40 have mean readings within 2 µs of each other. This catches a head or mic pair rotated the wrong way or about the wrong point.
+
+### AT5. The echo-free head table matches the KEMAR data
+- **Covers:** the head receiver (§4.12). Required only if a head table is built (⚠ OQ21).
+- **Setup:** head receiver, room with no reflections, no mic noise, no internal noise.
+- **Pass:** for every cell, the mean table reading is within **1 sample (≈ 20.8 µs)** of the ITD computed with the same estimator from the raw KEMAR impulse responses at the nearest measured direction, with a source on the left giving a positive ITD. The spike agreed to within 1 µs at 30°, 90°, and 150°.
+
+### AT6. A reverberant table stays close to the echo-free one
+- **Covers:** the ITD estimator's settings in reverb (§4.4, §4.12). Applies to every receiver.
+- **Setup:** training room R0, no internal noise.
+- **Pass:** in at least 95% of cells, the median reading is within 1 sample (≈ 20.8 µs) of the same cell's echo-free reading, and no cell's median falls on the wrong side of zero by more than 1 sample. This catches the two failures seen in the head spike: the full analysis window and the interpolated direction lookup. The thresholds are drafts.
 
 ## 7. Open questions
 
@@ -310,6 +346,7 @@ When a question is resolved: update the affected section above, add a line to [d
 | OQ18 | Is the front–back check too rare to study as planned? | TBD | Freezing §2 |
 | OQ19 | Do we adopt the homework's baselines and balanced evaluation? | TBD | Agents spec |
 | OQ20 | Can the formula-only environment be used for tests and pilots? | TBD | First code PR |
+| OQ21 | Do we use a simulated head, and how? | TBD | Freezing §3 |
 
 ### OQ1. How central should the algorithm comparison be?
 We lean toward a short comparison with the focus on the localization hypotheses. Most RL papers compare 2–3 algorithms. We need to confirm what the course expects. This affects how many agents are core and how many are stretch (OQ3).
@@ -334,6 +371,8 @@ How many, and how they differ from the training room: dimensions, RT60, head pos
 
 ### OQ6. Are harder acoustic conditions needed?
 The spike used the easiest case (white noise, source 1.5–2 m away), and ITD came through almost untouched. A farther source, speech, or narrowband sounds would degrade ITD more. Decide whether any of these belong in the core, and avoid claiming "reverb doesn't matter" beyond the conditions tested. Closely tied to OQ14.
+
+The head spike adds one case where reverb does matter: with a simulated head, the far ear is shadowed, and full-window ITD in the RT60 0.4 s room was off by more than 100 µs 43% of the time (§4.12).
 
 ### OQ7. Are the bin edges right?
 Draft edges are in §4.4 (±40 and ±260 µs). They interact with the turn size and the noise level: at σ = 20 µs a centered reading will sometimes fall outside the ±40 µs center bin. Confirm or adjust when the tabular agents are specified.
@@ -361,6 +400,12 @@ The default is a 50 ms white-noise burst. This choice could change the experimen
 - **A pure tone or smoke-detector-style beep** (narrowband, ~3 kHz): one cycle at 3 kHz lasts ~330 µs, shorter than our largest ITD (~525 µs). Several time lags line up equally well, so **ITD becomes ambiguous left–right, not just front–back.** This is a known reason high-pitched beeps, like a chirping smoke alarm, are hard for people to localize. People fall back on level differences at high frequencies, but our simulation has none (§3.3). The task may become much harder or unsolvable for an ITD-only agent. That's interesting research, but a different project.
 - **Middle options:** band-limited noise, speech, or short clicks.
 
+Evidence from the head spike, which tried a 3.2 kHz, 100 ms beep:
+- **ITD does wrap.** A true 371 µs read as 58 µs, even using only the start of the beep. This happens with or without a head.
+- **Level difference over the whole beep is set by the room, not the direction.** At 90° it pointed to the wrong side.
+- **With a head, the level difference in the first ~3 ms gives a clear left/right cue** (up to about 18 dB). It is the same in front and behind, so turning is still needed. This would require the head option (OQ21) and a level observation.
+- **Narrowband sounds need some mic noise in simulation.** Without it, GCC-PHAT recovers the ITD from faint content in the fade-in that real noise would bury.
+
 In code, the sound is a table-builder setting (one table per room and sound), so it's cheap to change. In experiment design it's expensive.
 
 ### OQ17. How should H1 and the success bar be worded?
@@ -384,6 +429,19 @@ More noise widens the set of starts that look centered, so the check may matter 
 
 ### OQ20. Can the formula-only environment be used for tests and pilots?
 D4 chose one acoustic pipeline and kept the formula for the report and AT1 only. A formula-only environment now exists from HW3. It uses numpy only, follows this spec's sign and unit conventions, and its default reward matches D19. It could be a third acoustic front end (§4.11) for fast unit tests and for pilots of the training budget and state design, with no reported result coming from it. Also to settle: whether course policy allows homework code to be reused in the team project, and how it would be shared.
+
+### OQ21. Do we use a simulated head, and how?
+The head spike showed that pyroomacoustics can simulate a measured dummy head in place of the two point mics. §4.12 records what a head table would need. The options, from least to most change:
+
+| Option | What we would do | What we get | What it costs |
+|---|---|---|---|
+| A. Leave it out | Point mics only. Cite the spike as a known limit. | Nothing new to build. ITD checks against the formula. Matches the bare two-mic rig (§4.11). | No answer if a reader asks whether the results hold for a real head. |
+| B. Check only | Train on point mics. Evaluate the trained policies on a head table with no retraining, like E3. | One result on whether the learned behavior survives a realistic head. | One head table per room tested, the onset-window estimator, and AT5. No extra training runs. |
+| C. Train on both | Add the head as a second condition in E1, and possibly E2. | A direct comparison of strategies learned with and without a head. | Up to twice the training runs. Head tables for every room. |
+| D. Head replaces point mics | The head is the receiver for all core experiments. | The most realistic core setup. | Tests compare against KEMAR data, not the formula. About 20× the table build time. No longer matches a bare two-mic rig. |
+| E. Head plus level cues | The agent also observes level differences. | A different question: does the agent stop turning when one reading is enough? | Changes the research question, H2, and D5. Larger observation and agent state. |
+
+In A–D the agent observes ITD only. Options B–E rest on a test of one head direction and need the follow-up test in §4.12 first.
 
 ### Resolved
 
