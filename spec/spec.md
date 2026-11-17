@@ -1,6 +1,6 @@
 # Project Spec: Active Sound Localization with RL
 
-**Team:** Jake Lambert, Rachel Ellinger, Harris Davidson · **Last updated:** 2026-11-13
+**Team:** Jake Lambert, Rachel Ellinger, Harris Davidson · **Last updated:** 2026-11-16
 
 This is the one document that describes what we are building. It holds only what is true **now**. Where it differs from the proposal (`report/main_proposal.tex`), this document wins. The reasons behind each choice are in [decisions.md](decisions.md), which you don't need to read to follow this document.
 
@@ -9,7 +9,7 @@ This is the one document that describes what we are building. It holds only what
 - **Section status.** Each section is marked **Draft** (still changing), **Agreed** (the team has reviewed it), or **Frozen** (ready to build from). Coding agents build only from Frozen sections. Everything is Draft until the team's first review.
 - **IDs.** Hypotheses (H1…), experiments (E0…), stretch goals (S1…), code requirements (R1…), acceptance tests (AT1…), open questions (OQ1…), and decisions (D1…) keep their IDs for the life of the project. IDs are never reused.
 - **⚠ marks** a value that depends on an open question. The full list of open questions is in [Section 7](#7-open-questions).
-- **Source column** in the tables: **P** = proposal · **Dn** = a decision in [decisions.md](decisions.md) · **Spike** = the [calibration test](../spikes/reverb_itd/RESULTS.md) · **New** = first written down here, so it especially needs review.
+- **Source column** in the tables: **P** = proposal · **Dn** = a decision in [decisions.md](decisions.md) · **Spike** = the [calibration test](../spikes/reverb_itd/RESULTS.md) · **HW3** = [findings from Harris's Homework 3](../spikes/hw3_formula/FINDINGS.md), which ran hand-written policies on a formula-only version of this environment · **New** = first written down here, so it especially needs review.
 - **Later:** when a section is Frozen and needs build-level detail (interfaces, file formats, tasks), that detail goes in its own file under `spec/components/`. This document keeps the summary and links to it.
 
 ---
@@ -32,12 +32,12 @@ The paper is about the localization behavior. We compare algorithms along the wa
 
 | ID | Hypothesis |
 |---|---|
-| **H1** | In low noise, the learning agents reach at least 90% of the oracle's return and match the hand-written strategy. |
-| **H2** | The front–back check emerges unprompted: when the sound starts centered, the agent turns before it declares. |
+| **H1** | In low noise, the learning agents match the hand-written check strategy (§4.9) and beat the no-memory rule. ⚠ OQ17 |
+| **H2** | The front–back check emerges unprompted: when the sound starts centered, the agent turns before it declares. ⚠ OQ18 |
 | **H3** | As noise increases, agents listen more, and they lose less performance than the fixed hand-written strategy. |
 | **H4** | Policies trained in one room keep their performance in rooms they have never seen. |
 
-**Strategy analysis.** Search strategy (ex. move towards noise) will be addressed in that analysis of H2 and H3 including the mix of actions, typical trajectories, and how both shift with noise.
+**Strategy analysis.** Search strategy (e.g. moving toward the sound) is covered in the analysis of H2 and H3: the mix of actions, typical trajectories, and how both shift with noise.
 
 **Algorithm comparison.** Each hypothesis is examined across the algorithms we train. Which algorithms, and how many, is open (⚠ OQ1, OQ3).
 
@@ -147,7 +147,7 @@ o_t = r_t + ε_t
 | Readings per cell K | 200, each from a different random noise burst | D7 | Built once per room (~5–15 min on one laptop core), shared by all seeds. |
 | ITD estimator | GCC-PHAT, sub-sample (parabolic) interpolation, lag search limited to ±b/c | D4, Spike | Pick the **largest positive** peak, not the largest absolute value (a bug noted in `sim/`). |
 | Internal noise σ, base condition | 20 µs | New, D6 | ⚠ OQ4. Hides the room's faint front/back cue (Spike). Small next to the 82 µs ITD change from one turn away from center. |
-| σ sweep (E2) | {10, 20, 40, 80, 160} µs | New | ⚠ OQ4. 160 µs ≈ two turns' worth of ITD change, which should be hard. |
+| σ sweep (E2) | {10, 20, 40, 80, 160} µs | New | ⚠ OQ4. 160 µs ≈ two turns' worth of ITD change, which should be hard. In the homework test it was too hard to be informative: the hand-written policies dithered until the step limit (HW3). |
 | What the agent sees | Only o_t. Never θ, ĥ_t, or φ_t. | P | Hidden state is logged for analysis (R4) but never passed to agents. |
 
 **Why add noise at all?** Simulated ITD is nearly perfect (typical error under 3 µs, even with reverb), so without added noise the "listen" action is useless and H3 has nothing to test. We frame the Gaussian term as neural/internal noise, a standard modeling device in hearing science (D6).
@@ -180,15 +180,18 @@ Source: New. ⚠ OQ7. The ±40 µs center edge is chosen so that one 9° turn aw
 | Parameter | Default | Source | Notes |
 |---|---|---|---|
 | Step cost | −1 per action, including declare | P | |
-| Declaration reward | 100 · (1 − Δθ/π), where Δθ ∈ [0, π] is the angle between the source and the declared heading, measured the short way round | P | |
+| Declaration reward | 1000 · (1 − Δθ/π), where Δθ ∈ [0, π] is the angle between the source and the declared heading, measured the short way round | D19, HW3 | Ten times the proposal's 100. Declaring one turn (9°) off costs 50 points, the same as 50 actions. |
 | Step limit | 50 actions; then the episode ends with no declaration reward | New | ⚠ OQ8. A worst-case search (20 turns plus listens) fits. |
 | Discount γ | 1 | P | Episodes are finite, and the step cost already penalizes delay. |
 
 **Reference returns** (σ = 0):
-- **Oracle** (knows θ, turns the short way, declares): return = 100 − (d + 1), where d is the number of turns. Averaged over random starts d is 10, so the **oracle averages 89.**
-- **Declaring immediately** averages 50 − 1 = **49, which is 55% of the oracle.** Values near this mean nothing has been learned.
+- **Oracle** (knows θ, turns the short way, declares): return = 1000 − (d + 1), where d is the number of turns. Averaged over random starts d is 10, so the **oracle averages 989.**
+- **Declaring immediately** averages 500 − 1 = **499, which is 50% of the oracle.** Values near this mean nothing has been learned.
+- **Running out the step limit** returns −50.
 
-These replace the proposal's 88 and 49, which assumed a source anywhere on the circle (D14).
+These replace the proposal's 88 and 49, which used a reward of 100 and assumed a source anywhere on the circle (D14, D19).
+
+**Why 1000 and not 100?** Under the proposal's reward, one action cost as much as 1.8° of error, so a listen could never pay for itself. In a test with hand-written policies, listening raised completion but lowered return at every noise level, which would leave H3 with nothing to test. At 1000, one more reading gained about 9 points at σ = 40 µs and 15 points at σ = 80 µs, and made no difference at σ ≤ 20 µs. That is the pattern H3 predicts. The evidence is from the formula-only environment with untuned policies (HW3), so it should be rechecked on the room table.
 
 ### 4.7 Agent state
 
@@ -201,35 +204,43 @@ The environment emits raw readings o_t. **Each agent builds its own state** from
 
 ⚠ OQ2: Option A remembers only two readings, so the agent can't build up evidence by listening repeatedly, which H3 depends on. To be decided when the algorithms are chosen (OQ3).
 
+Evidence so far (HW3, hand-written policies): one bit of memory, "have I turned yet?", is enough for the front–back check at σ ≤ 20 µs. Richer memory matters only for averaging readings under noise. The homework's Option A array has 150 entries, not 120, because it keeps an unused slot for "declare" as the previous action.
+
 ### 4.8 Evaluation
 
 | Parameter | Default | Source | Notes |
 |---|---|---|---|
 | Training room | One fixed room (R0) for all training | D8 | |
-| Final evaluation | 1,000 episodes per room, greedy policy (exploration off), fixed seeds | P, D8 | R3 |
-| Validation during training | 200 episodes per room, greedy, every N training episodes | D8 | ⚠ OQ8: N |
+| Final evaluation | 1,000 episodes per room: 25 from each of the 40 starting directions (the source direction relative to the nose at the start), with the starting heading drawn at random. Greedy policy (exploration off), fixed seeds. | P, D8, D20, HW3 | R3. ⚠ OQ19. Training episodes still use random starts (§4.5). |
+| Validation during training | Same design as the final evaluation (25 × 40 episodes per room), greedy, every N training episodes | D8, D20, HW3 | ⚠ OQ8: N. ⚠ OQ19: was 200 episodes with random starts, which samples the dead-behind start only about 5 times. May be cut back if it slows training. |
 | Rooms evaluated | R0 plus the held-out rooms | D8 | |
 | Completion | The agent declares within one turn of the source (Δθ ≤ 9°) | P | Timeouts and wider misses count as failures. |
 | Primary metrics | Completion rate · learning curve (greedy validation return vs. training episodes, mean and spread across seeds) · fraction of oracle return | P, D8 | |
-| Secondary metrics | Angular error at declaration · steps before declaring · fraction of steps spent listening | P | |
-| Success, base condition | At least 99% completion, a learning curve that levels off, and at least 90% of oracle return. The hand-written baseline is run first to confirm these are attainable at base σ. | P | |
+| Secondary metrics | Angular error at declaration · steps before declaring · fraction of steps spent listening · completion and listens broken down by starting direction | P, D20, HW3 | The by-direction breakdown is what shows a front–back failure. |
+| Success, base condition | At least 99% completion, a learning curve that levels off, and a return that matches the check baseline (§4.9) within a margin still to be set. | P, D21, HW3 | ⚠ OQ17. On the formula-only environment the check baseline reached 99.9% completion at σ = 20 µs, so the bar is attainable there. An agent with no memory tops out at 97.5%. To be confirmed on the room table. |
 
 ### 4.9 Baselines
 
 | Baseline | Definition | Source |
 |---|---|---|
 | Random | Uniform over the 4 actions | P |
-| Hand-written | Turn toward the side the reading points to until it's centered. Make one extra turn to check front vs. back: if the reading moves the "wrong" way, the source is behind, so turn 180° (20 turns) and recenter. Then declare. | P |
+| No memory | Turn toward the side the reading points to. Declare when the reading is centered (\|o_t\| ≤ 40 µs). | HW3, D20 |
+| Check (the hand-written strategy) | As no memory, but it never declares before it has turned at least once. | HW3, D20 |
+| Check + k readings | As check, but when a reading looks centered it gathers k readings at that heading and decides on their mean. | HW3, D20 |
 | Oracle | Knows θ. An upper bound only, not a target. | P |
 
-How the hand-written baseline handles noise (e.g. how many listens before it trusts a reading) will be set in the agents component spec.
+⚠ OQ19. The proposal's hand-written strategy made one extra turn to check in every episode, then turned 180° if the source was behind. The check rule reaches the same completion in fewer steps, because turning toward the reading already brings a source behind the head round to the front. The check is needed only when the first reading is centered (HW3).
+
+For scale, on the formula-only environment at σ = 20 µs the no-memory rule averaged 963, check 987, and the oracle 989 (HW3).
+
+The value of k will be set in the agents component spec. The homework tried k = 2 and k = 4.
 
 ### 4.10 Training budget
 
 | Parameter | Default | Source | Notes |
 |---|---|---|---|
 | Seeds per configuration | Pilot with 30, then decide | New | ⚠ OQ8. 100+ was floated; compute allows it for the tabular agents. |
-| Training episodes per run | To be set from the pilot (expect roughly 10⁴–10⁵ for tabular) | New | ⚠ OQ8 |
+| Training episodes per run | To be set from the pilot | New, HW3 | ⚠ OQ8. The earlier guess of 10⁴–10⁵ for tabular agents looks optimistic: in a Monte Carlo pilot, Options A and B were far from converged after 50,000 episodes. Q-learning and SARSA are untested. |
 
 ### 4.11 Hardware compatibility
 
@@ -295,6 +306,10 @@ When a question is resolved: update the affected section above, add a line to [d
 | OQ12 | What to do with the old `sim/` code? | Jake | First code PR |
 | OQ13 | Should the core include a reverb sweep? | Jake & Rachel | Freezing §3 |
 | OQ14 | What sound should the source play? | Jake & Rachel | Freezing §4.3 |
+| OQ17 | How should H1 and the success bar be worded? | TBD | Running E1 |
+| OQ18 | Is the front–back check too rare to study as planned? | TBD | Freezing §2 |
+| OQ19 | Do we adopt the homework's baselines and balanced evaluation? | TBD | Agents spec |
+| OQ20 | Can the formula-only environment be used for tests and pilots? | TBD | First code PR |
 
 ### OQ1. How central should the algorithm comparison be?
 We lean toward a short comparison with the focus on the localization hypotheses. Most RL papers compare 2–3 algorithms. We need to confirm what the course expects. This affects how many agents are core and how many are stretch (OQ3).
@@ -302,11 +317,17 @@ We lean toward a short comparison with the focus on the localization hypotheses.
 ### OQ2. What does the agent's state contain?
 The two candidates are in §4.7. The proposal's state can't accumulate evidence over repeated listens, which H3 depends on. Decide together with OQ3.
 
+Evidence from HW3: a hand-written rule with one bit of memory ("have I turned yet?") came within 2 points of the oracle's 989 at σ = 20 µs. So the front–back problem needs very little memory, and richer memory is for averaging readings under noise. In a Monte Carlo pilot, a state holding only the current reading's bin learned fastest. Options A and B were far from converged after 50,000 episodes. A smaller third option (current bin plus a "have I turned" bit) may be worth adding to the candidates.
+
 ### OQ3. Which algorithms, and how many?
 The proposal's list: tabular Q-learning, SARSA, semi-gradient SARSA with tile coding, REINFORCE with a baseline or actor-critic, and DQN as a stretch. Depends on OQ1 and OQ2.
 
+Untested reasoning from HW3: with greedy evaluation, SARSA may undervalue listening, because it prices in its own exploratory declarations and turns. No run has confirmed this.
+
 ### OQ4. Which noise levels?
 Draft values are in §4.4: a base σ of 20 µs and a sweep of {10, 20, 40, 80, 160} µs. Confirm the base value and the range. At 20 µs or more, the room's faint front/back cue is hidden.
+
+Evidence from HW3 (formula-only environment, hand-written policies, D19 reward): extra listening paid at σ = 40 and 80 µs, made no difference at σ ≤ 20 µs, and σ = 160 µs was too noisy to be informative. Consider whether 160 µs stays in the sweep, and whether a value between 80 and 160 µs would tell us more.
 
 ### OQ5. Which held-out rooms?
 How many, and how they differ from the training room: dimensions, RT60, head position, source distance.
@@ -319,6 +340,8 @@ Draft edges are in §4.4 (±40 and ±260 µs). They interact with the turn size 
 
 ### OQ8. Training budget, seeds, step limit
 Number of seeds (the class norm is many; 100+ was floated), episodes per run, the 50-action step limit (§4.6), and how often to validate during training. A small pilot measuring the variance between seeds should come before fixing the seed count.
+
+Evidence from HW3: in a first Monte Carlo pilot (ε = 0.1, 8 seeds), every agent still scored about 500 after 10,000 episodes, which is what declaring immediately earns. Returns swing by hundreds of points between episodes while the gap between a good and a bad action is tens of points. Learning speed may be the main schedule risk, so a pilot with the algorithms we plan to use should come before §4.6 and §4.7 are frozen. At σ = 160 µs the hand-written policies ran into the 50-action limit.
 
 ### OQ10. Moving source design (S1)
 The motion model (speed, continuous or step-wise), how the reward handles a moving target, and whether the table grid still suffices.
@@ -339,6 +362,28 @@ The default is a 50 ms white-noise burst. This choice could change the experimen
 - **Middle options:** band-limited noise, speech, or short clicks.
 
 In code, the sound is a table-builder setting (one table per room and sound), so it's cheap to change. In experiment design it's expensive.
+
+### OQ17. How should H1 and the success bar be worded?
+H1 used to ask for 90% of the oracle's return. A rule with no memory already reaches about 97% (963 of 989 at σ = 20 µs, HW3), so that bar can't tell a good agent from a mediocre one. The draft H1 and the success bar in §4.8 now compare agents with the check baseline. Still open:
+- **The margin that counts as "matching".** Check and no-memory are only about 24 points apart, so the margin has to be set from the variance between seeds.
+- **The headline metric.** Under the proposal's reward, listening raised completion and lowered return. Under the D19 reward the two agree at σ = 40 and 80 µs. Decide whether return or completion leads.
+
+### OQ18. Is the front–back check too rare to study as planned?
+Turning toward the sound brings a source behind the head round to the front without any explicit check. In the homework test the check mattered only when the source started directly behind, which is 1 start in 40. It was worth about 24 points of 989 on average (HW3). The behavior at the center of H2 is therefore rare and worth little return, which makes it slow to learn and hard to show. Options:
+- **Report H2 on centered starts only.** The by-direction evaluation (§4.8) already supports this.
+- **Sample centered starts more often** in training, in evaluation, or both.
+- **Reframe.** "Turning toward the sound resolves most front–back confusion for free" would itself be a finding, with the explicit check as the edge case.
+
+More noise widens the set of starts that look centered, so the check may matter more in E2 than in E1.
+
+### OQ19. Do we adopt the homework's baselines and balanced evaluation?
+§4.8 and §4.9 now carry the homework's design as a draft: three hand-written baselines (no memory, check, check + k readings) and evaluation with 25 episodes from each of the 40 starting directions. Confirm or change:
+- Whether check replaces the proposal's "one extra turn every episode" strategy, or both are kept.
+- The validation size during training. 1,000 episodes per room per pass is thorough but may slow training once there are several rooms.
+- Whether training episodes should also be balanced by starting direction. They are random for now.
+
+### OQ20. Can the formula-only environment be used for tests and pilots?
+D4 chose one acoustic pipeline and kept the formula for the report and AT1 only. A formula-only environment now exists from HW3. It uses numpy only, follows this spec's sign and unit conventions, and its default reward matches D19. It could be a third acoustic front end (§4.11) for fast unit tests and for pilots of the training budget and state design, with no reported result coming from it. Also to settle: whether course policy allows homework code to be reused in the team project, and how it would be shared.
 
 ### Resolved
 

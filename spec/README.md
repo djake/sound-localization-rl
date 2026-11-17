@@ -10,7 +10,7 @@ Read this first if you are new to the `spec/` folder, whether you are a teammate
 | [decisions.md](decisions.md) | History. One line per decision: what, why, what it changed. Append-only. | Anyone asking "why did we do it this way?" |
 | `components/` (not created yet) | Build-level detail for one component each: interfaces, file formats, tests, tasks. | Coding agents, and whoever reviews their work |
 
-Supporting evidence lives outside this folder: the calibration test in [`spikes/reverb_itd/RESULTS.md`](../spikes/reverb_itd/RESULTS.md) and the original proposal in `report/main_proposal.tex`. The proposal is non-binding; where it differs from `spec.md`, the spec wins.
+Supporting evidence lives outside this folder: the calibration test in [`spikes/reverb_itd/RESULTS.md`](../spikes/reverb_itd/RESULTS.md), the findings from Harris's Homework 3 in [`spikes/hw3_formula/FINDINGS.md`](../spikes/hw3_formula/FINDINGS.md), and the original proposal in `report/main_proposal.tex`. The proposal is non-binding; where it differs from `spec.md`, the spec wins.
 
 ## The strategy
 
@@ -58,3 +58,4 @@ The team intends for AI agents to write all or almost all of the code, working f
 - **Teaching team check** (OQ1): how central the algorithm comparison should be.
 - **Team conversations** flagged for Jake and Rachel: the source sound (OQ14) and a reverb sweep (OQ13).
 - **Agent state and choice of algorithms** (OQ2, OQ3): needed before the agents component spec.
+- **Homework 3 follow-ups** (OQ17–OQ20): how H1 is worded, whether the front–back check is too rare to study as planned, the new baselines and balanced evaluation, and whether the formula-only environment can be used for tests and pilots.
